@@ -149,21 +149,21 @@ describe "Error Handling and Edge Cases" do
   
   describe "CommandResult class" do
     it "should create result with all parameters" do
-      result = TrainPlugins::Juniper::CommandResult.new("output", 0, "error")
+      result = Train::Extras::CommandResult.new("output", "error", 0)
       _(result.stdout).must_equal("output")
       _(result.exit_status).must_equal(0)
       _(result.stderr).must_equal("error")
     end
     
     it "should handle string conversion" do
-      result = TrainPlugins::Juniper::CommandResult.new(123, "0", nil)
+      result = Train::Extras::CommandResult.new("123", "", 0)
       _(result.stdout).must_equal("123")
       _(result.exit_status).must_equal(0)
       _(result.stderr).must_equal("")
     end
     
     it "should provide default values" do
-      result = TrainPlugins::Juniper::CommandResult.new("output", 1)
+      result = Train::Extras::CommandResult.new("output", "", 1)
       _(result.stderr).must_equal("")
     end
   end

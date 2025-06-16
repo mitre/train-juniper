@@ -24,7 +24,7 @@ describe "Platform Detection Integration" do
       _(platform_obj).wont_be_nil
       _(platform_obj.name).must_equal("juniper")
       _(platform_obj.title).must_equal("Juniper JunOS")
-      _(platform_obj.family).must_equal("network")
+      _(platform_obj.family).must_equal("bsd")
     end
 
     it "should force platform without detection when connection not ready" do
@@ -37,7 +37,7 @@ describe "Platform Detection Integration" do
       
       # Should use plugin version as fallback
       _(platform_obj.release).must_equal(TrainPlugins::Juniper::VERSION)
-      _(platform_obj.arch).must_equal("network")
+      # Arch is not set since we removed it to fix family detection
     end
 
     it "should use plugin version as fallback when version detection fails" do
@@ -58,7 +58,7 @@ describe "Platform Detection Integration" do
       # Mock failed command execution
       mock_ssh = Class.new do
         def run_command(cmd)
-          TrainPlugins::Juniper::CommandResult.new("", 1, "Connection failed")
+          Train::Extras::CommandResult.new("", "Connection failed", 1)
         end
       end.new
       
@@ -75,7 +75,7 @@ describe "Platform Detection Integration" do
       # Mock command with invalid output
       mock_ssh = Class.new do
         def run_command(cmd)
-          TrainPlugins::Juniper::CommandResult.new("No version info here", 0)
+          Train::Extras::CommandResult.new("No version info here", "", 0)
         end
       end.new
       

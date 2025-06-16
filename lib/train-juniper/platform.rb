@@ -15,15 +15,13 @@ module TrainPlugins::Juniper
     # Train plugins like train-k8s-container.
     def platform
       # Register the juniper platform in Train's platform registry
-      # This defines juniper as a network device platform
-      Train::Platforms.name(PLATFORM_NAME).title("Juniper JunOS").in_family("network")
+      # JunOS devices are FreeBSD-based, so inherit from bsd family for InSpec resource compatibility
+      # This allows InSpec resources like 'command' to work with Juniper devices
+      Train::Platforms.name(PLATFORM_NAME).title("Juniper JunOS").in_family("bsd")
       
       # Bypass Train's platform detection and declare our known platform
       # This prevents Train from running detection commands before connection is ready
-      force_platform!(PLATFORM_NAME, {
-        release: detect_junos_version || TrainPlugins::Juniper::VERSION,
-        arch: "network"
-      })
+      force_platform!(PLATFORM_NAME, release: TrainPlugins::Juniper::VERSION)
     end
     
     private

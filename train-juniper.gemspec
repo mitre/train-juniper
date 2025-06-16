@@ -60,8 +60,8 @@ Gem::Specification.new do |spec|
   # train-core provides core functionality without cloud dependencies
   spec.add_dependency "train-core", "~> 3.12.13"
   
-  # SSH connectivity dependencies - using same version as train-core
-  spec.add_dependency "net-ssh", "~> 7.0"
+  # SSH connectivity dependencies - match train-core's exact version range
+  spec.add_dependency "net-ssh", ">= 2.9", "< 8.0"
   
   # Force compatible FFI version to avoid conflicts with InSpec
   spec.add_dependency "ffi", "~> 1.16.0"

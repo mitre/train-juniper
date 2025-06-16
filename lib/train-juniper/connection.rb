@@ -116,7 +116,7 @@ module TrainPlugins
         rescue => e
           @logger.error("Command execution failed: #{e.message}")
           # Handle connection errors gracefully
-          CommandResult.new("", 1, e.message)
+          CommandResult.new("", e.message, 1)
         end
       end
       
@@ -128,7 +128,8 @@ module TrainPlugins
         
         begin
           # Use direct SSH connection (network device pattern)
-          require 'net/ssh'
+          # Defensive loading - only require if not fully loaded
+          require 'net/ssh' unless defined?(Net::SSH) && Net::SSH.respond_to?(:start)
           
           @logger.debug("Establishing SSH connection to Juniper device")
           
@@ -149,7 +150,7 @@ module TrainPlugins
           
           # Add bastion host support if configured
           if @options[:bastion_host]
-            require 'net/ssh/proxy/jump'
+            require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
             
             # Build proxy jump string from bastion options
             bastion_user = @options[:bastion_user] || 'root'
@@ -241,9 +242,9 @@ module TrainPlugins
       def format_junos_result(output, cmd)
         # Parse JunOS-specific error patterns
         if junos_error?(output)
-          CommandResult.new("", 1, output)
+          CommandResult.new("", output, 1)
         else
-          CommandResult.new(clean_output(output, cmd), 0, "")
+          CommandResult.new(clean_output(output, cmd), "", 0)
         end
       end
       
@@ -322,19 +323,19 @@ module TrainPlugins
       def mock_command_result(cmd)
         case cmd
         when /show version/
-          CommandResult.new(mock_show_version_output, 0)
+          CommandResult.new(mock_show_version_output, "", 0)
         when /show chassis hardware/
-          CommandResult.new(mock_chassis_output, 0)
+          CommandResult.new(mock_chassis_output, "", 0)
         when /show configuration/
-          CommandResult.new("interfaces {\n    ge-0/0/0 {\n        unit 0;\n    }\n}", 0)
+          CommandResult.new("interfaces {\n    ge-0/0/0 {\n        unit 0;\n    }\n}", "", 0)
         when /show route/
-          CommandResult.new("inet.0: 5 destinations, 5 routes\n0.0.0.0/0       *[Static/5] 00:00:01\n", 0)
+          CommandResult.new("inet.0: 5 destinations, 5 routes\n0.0.0.0/0       *[Static/5] 00:00:01\n", "", 0)
         when /show system information/
-          CommandResult.new("Hardware: SRX240H2\nOS: JUNOS 12.1X47-D15.4\n", 0)
+          CommandResult.new("Hardware: SRX240H2\nOS: JUNOS 12.1X47-D15.4\n", "", 0)
         when /show interfaces/
-          CommandResult.new("Physical interface: ge-0/0/0, Enabled, Physical link is Up\n", 0)
+          CommandResult.new("Physical interface: ge-0/0/0, Enabled, Physical link is Up\n", "", 0)
         else
-          CommandResult.new("% Unknown command: #{cmd}", 1)
+          CommandResult.new("% Unknown command: #{cmd}", "", 1)
         end
       end
       
@@ -367,17 +368,6 @@ module TrainPlugins
       ].freeze
     end
     
-    
-    # Wrapper for command execution results
-    class CommandResult
-      attr_reader :stdout, :stderr, :exit_status
-      
-      def initialize(stdout, exit_status, stderr = "")
-        @stdout = stdout.to_s
-        @stderr = stderr.to_s
-        @exit_status = exit_status.to_i
-      end
-    end
     
     # File abstraction for Juniper configuration and operational data
     class JuniperFile

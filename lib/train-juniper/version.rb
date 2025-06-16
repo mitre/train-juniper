@@ -5,6 +5,6 @@
 
 module TrainPlugins
   module Juniper
-    VERSION = "0.2.0".freeze
+    VERSION = "0.4.0-dev".freeze
   end
 end
