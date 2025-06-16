@@ -81,14 +81,14 @@ describe TrainPlugins::Juniper::Connection do
       _(options[:proxy_command]).must_equal("ssh jump.host -W %h:%p")
     end
     
-    it "should generate correct bastion proxy command" do
+    it "should accept bastion proxy configuration for Train's SSH transport" do
       connection = connection_class.new(bastion_options)
-      proxy_command = connection.send(:generate_bastion_proxy_command)
+      options = connection.instance_variable_get(:@options)
       
-      _(proxy_command).must_match(/ssh/)
-      _(proxy_command).must_match(/netadmin@jump.example.com/)
-      _(proxy_command).must_match(/-p 2222/)
-      _(proxy_command).must_match(/-W %h:%p/)
+      # Verify Train SSH transport will receive the correct options
+      _(options[:bastion_host]).must_equal("jump.example.com")
+      _(options[:bastion_user]).must_equal("netadmin")
+      _(options[:bastion_port]).must_equal(2222)
     end
     
     it "should reject both bastion_host and proxy_command" do

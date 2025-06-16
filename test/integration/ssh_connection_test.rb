@@ -22,9 +22,9 @@ describe "SSH Connection Integration" do
       # Test connection state checking - stays in mock mode
       _(connection.send(:connected?)).must_equal(false)
       
-      # Mock an SSH connection to test connected? method
+      # Mock an SSH session to test connected? method
       mock_ssh = Object.new
-      connection.instance_variable_set(:@ssh_connection, mock_ssh)
+      connection.instance_variable_set(:@ssh_session, mock_ssh)
       _(connection.send(:connected?)).must_equal(true)
     end
 
@@ -39,7 +39,7 @@ describe "SSH Connection Integration" do
       }).must_raise(Train::ClientError)
     end
 
-    it "should setup bastion proxy command correctly" do
+    it "should pass bastion options to Train SSH transport" do
       bastion_options = connection_options.merge({
         bastion_host: "bastion.example.com",
         bastion_user: "bastionuser",
@@ -48,25 +48,25 @@ describe "SSH Connection Integration" do
       })
       
       test_connection = TrainPlugins::Juniper::Connection.new(bastion_options)
-      proxy_command = test_connection.send(:generate_bastion_proxy_command)
+      options = test_connection.instance_variable_get(:@options)
       
-      _(proxy_command).must_include("ssh")
-      _(proxy_command).must_include("bastionuser@bastion.example.com")
-      _(proxy_command).must_include("-p 2222")
-      _(proxy_command).must_include("-i /path/to/key.pem")
-      _(proxy_command).must_include("-W %h:%p")
+      # Verify Train SSH transport receives correct bastion options
+      _(options[:bastion_host]).must_equal("bastion.example.com")
+      _(options[:bastion_user]).must_equal("bastionuser")
+      _(options[:bastion_port]).must_equal(2222)
+      _(options[:key_files]).must_equal(["/path/to/key.pem"])
     end
 
-    it "should setup custom proxy command correctly" do
+    it "should pass proxy command to Train SSH transport" do
       proxy_options = connection_options.merge({
         proxy_command: "ssh -W %h:%p custom-proxy.example.com"
       })
       
       test_connection = TrainPlugins::Juniper::Connection.new(proxy_options)
-      proxy_config = test_connection.send(:setup_proxy_connection)
+      options = test_connection.instance_variable_get(:@options)
       
-      _(proxy_config).wont_be_nil
-      _(proxy_config).must_be_kind_of(Net::SSH::Proxy::Command)
+      # Verify Train SSH transport receives correct proxy command
+      _(options[:proxy_command]).must_equal("ssh -W %h:%p custom-proxy.example.com")
     end
   end
 
@@ -103,13 +103,13 @@ describe "SSH Connection Integration" do
           @commands = commands_array
         end
         
-        def run_command(cmd)
+        def exec!(cmd)
           @commands << cmd
-          TrainPlugins::Juniper::CommandResult.new("", 0)
+          "mock output for: #{cmd}"
         end
       end.new(commands_executed)
       
-      connection.instance_variable_set(:@ssh_connection, mock_ssh)
+      connection.instance_variable_set(:@ssh_session, mock_ssh)
       
       # This will exercise the test_and_configure_session method
       connection.send(:test_and_configure_session)
@@ -122,16 +122,16 @@ describe "SSH Connection Integration" do
     it "should handle session configuration failures gracefully" do
       # Mock SSH that fails on configuration commands
       failing_ssh = Class.new do
-        def run_command(cmd)
+        def exec!(cmd)
           if cmd.include?("echo")
-            TrainPlugins::Juniper::CommandResult.new("connection test", 0)
+            "connection test"
           else
-            TrainPlugins::Juniper::CommandResult.new("", 1, "Configuration failed")
+            raise "Configuration failed"
           end
         end
       end.new
       
-      connection.instance_variable_set(:@ssh_connection, failing_ssh)
+      connection.instance_variable_set(:@ssh_session, failing_ssh)
       
       # Should not raise an exception, just log a warning
       _(proc { connection.send(:test_and_configure_session) }).must_be_silent

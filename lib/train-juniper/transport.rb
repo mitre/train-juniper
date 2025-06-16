@@ -18,7 +18,7 @@ module TrainPlugins
       
       # Proxy/Bastion host support (Train standard options)
       option :bastion_host, default: nil
-      option :bastion_user, default: "root"
+      option :bastion_user, default: nil  # Let connection handle env vars and defaults
       option :bastion_port, default: 22
       option :proxy_command, default: nil
       option :proxy_jump, default: nil

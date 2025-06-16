@@ -24,7 +24,7 @@ module TrainPlugins
       # Include Juniper-specific platform detection
       include TrainPlugins::Juniper::Platform
 
-      attr_reader :ssh_connection
+      attr_reader :ssh_session
 
       def initialize(options)
         # Configure SSH connection options for Juniper devices
@@ -38,7 +38,8 @@ module TrainPlugins
         
         # Proxy/bastion environment variables (Train standard)
         @options[:bastion_host] ||= ENV['JUNIPER_BASTION_HOST']
-        @options[:bastion_user] ||= ENV['JUNIPER_BASTION_USER'] || 'root'
+        @options[:bastion_user] ||= ENV['JUNIPER_BASTION_USER']
+        @options[:bastion_user] ||= 'root'  # Default only if no env var
         @options[:bastion_port] ||= ENV['JUNIPER_BASTION_PORT']&.to_i || 22
         @options[:proxy_command] ||= ENV['JUNIPER_PROXY_COMMAND']
         
@@ -55,6 +56,7 @@ module TrainPlugins
         # Log connection info without exposing credentials
         safe_options = @options.reject { |k,v| [:password, :proxy_command, :key_files].include?(k) }
         @logger.debug("Juniper connection initialized with options: #{safe_options.inspect}")
+        @logger.debug("Environment: JUNIPER_BASTION_USER=#{ENV['JUNIPER_BASTION_USER']} -> bastion_user=#{@options[:bastion_user]}")
         
         # Validate proxy configuration early (Train standard)
         validate_proxy_options
@@ -94,7 +96,7 @@ module TrainPlugins
         raise NotImplementedError, "#{self.class} does not implement #download() - use run_command() to retrieve configuration data"
       end
 
-      # Execute commands on Juniper device via Train SSH transport
+      # Execute commands on Juniper device via SSH
       def run_command_via_connection(cmd)
         return mock_command_result(cmd) if @options[:mock]
         
@@ -104,13 +106,13 @@ module TrainPlugins
           
           @logger.debug("Executing command: #{cmd}")
           
-          # Execute command via Train's SSH transport
-          result = @ssh_connection.run_command(cmd)
+          # Execute command via SSH session
+          output = @ssh_session.exec!(cmd)
           
-          @logger.debug("Command output: #{result.stdout}")
+          @logger.debug("Command output: #{output}")
           
-          # Return Train's CommandResult
-          result
+          # Format JunOS result
+          format_junos_result(output, cmd)
         rescue => e
           @logger.error("Command execution failed: #{e.message}")
           # Handle connection errors gracefully
@@ -125,10 +127,10 @@ module TrainPlugins
         return if connected?
         
         begin
-          # Use direct SSH connection (community plugin pattern - avoid Train SSH detection)
+          # Use direct SSH connection (network device pattern)
           require 'net/ssh'
           
-          @logger.debug("Establishing direct SSH connection to avoid platform detection loops")
+          @logger.debug("Establishing SSH connection to Juniper device")
           
           ssh_options = {
             port: @options[:port] || 22,
@@ -145,32 +147,65 @@ module TrainPlugins
             ssh_options[:keys_only] = @options[:keys_only]
           end
           
-          # Add proxy jump support (simpler than ProxyCommand)
-          if @options[:bastion_host] || @options[:proxy_jump]
+          # Add proxy support if configured  
+          if @options[:proxy_jump]
+            require 'net/ssh/proxy/jump'
+            
+            # Set up automated password authentication via SSH_ASKPASS
+            if @options[:proxy_password]
+              # Create temporary SSH_ASKPASS script for automated password input
+              @ssh_askpass_script = create_ssh_askpass_script(@options[:proxy_password])
+              ENV['SSH_ASKPASS'] = @ssh_askpass_script
+              ENV['SSH_ASKPASS_REQUIRE'] = 'force'  # Force use of SSH_ASKPASS even with terminal
+              @logger.debug("Configured SSH_ASKPASS for automated proxy authentication")
+            end
+            
+            ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(@options[:proxy_jump])
+            @logger.debug("Using proxy jump: #{@options[:proxy_jump]}")
+          elsif @options[:bastion_host]
             setup_proxy_jump(ssh_options)
           end
           
           @logger.debug("Connecting to #{@options[:host]}:#{@options[:port]} as #{@options[:user]}")
           
-          # Direct SSH connection (proxy jump handled in ssh_options)
+          # Direct SSH connection 
           @ssh_session = Net::SSH.start(@options[:host], @options[:user], ssh_options)
-          @logger.debug("Direct SSH connection established successfully")
-          
-          # Create simple command wrapper
-          @ssh_connection = JuniperSSHConnection.new(@ssh_session, @logger)
+          @logger.debug("SSH connection established successfully")
           
           # Configure JunOS session for automation
           test_and_configure_session
           
         rescue => e
           @logger.error("SSH connection failed: #{e.message}")
-          raise Train::TransportError, "Failed to connect to Juniper device #{@options[:host]}: #{e.message}"
+          
+          # Provide helpful error messages for common authentication issues
+          if (e.message.include?("Permission denied") || e.message.include?("command failed")) && @options[:bastion_host]
+            raise Train::TransportError, <<~ERROR
+              Failed to connect to Juniper device #{@options[:host]} via bastion #{@options[:bastion_host]}: #{e.message}
+              
+              SSH bastion authentication with passwords is not supported due to ProxyCommand limitations.
+              Please use one of these alternatives:
+              
+              1. SSH Key Authentication (Recommended):
+                 Use --key-files option to specify SSH private key files
+                 
+              2. SSH Agent:
+                 Ensure your SSH agent has the required keys loaded
+                 
+              3. Direct Connection:
+                 Connect directly to the device if network allows (remove bastion options)
+              
+              For more details, see: https://mitre.github.io/train-juniper/troubleshooting/#bastion-authentication
+            ERROR
+          else
+            raise Train::TransportError, "Failed to connect to Juniper device #{@options[:host]}: #{e.message}"
+          end
         end
       end
       
       # Check if SSH connection is active
       def connected?
-        !@ssh_connection.nil?
+        !@ssh_session.nil?
       rescue
         false
       end
@@ -180,17 +215,13 @@ module TrainPlugins
         @logger.debug("Testing SSH connection and configuring JunOS session")
         
         # Test connection first
-        result = @ssh_connection.run_command('echo "connection test"')
-        unless result.exit_status == 0
-          raise "SSH connection test failed: #{result.stderr}"
-        end
-        
+        result = @ssh_session.exec!('echo "connection test"')
         @logger.debug("SSH connection test successful")
         
         # Optimize CLI for automation
-        @ssh_connection.run_command('set cli screen-length 0')
-        @ssh_connection.run_command('set cli screen-width 0') 
-        @ssh_connection.run_command('set cli complete-on-space off') if @options[:disable_complete_on_space]
+        @ssh_session.exec!('set cli screen-length 0')
+        @ssh_session.exec!('set cli screen-width 0') 
+        @ssh_session.exec!('set cli complete-on-space off') if @options[:disable_complete_on_space]
         
         @logger.debug("JunOS session configured successfully")
       rescue => e
@@ -237,12 +268,12 @@ module TrainPlugins
         end
       end
       
-      # Setup proxy jump (SSH -J option) - simpler and handles passwords  
+      # Setup proxy jump directly in SSH options (original working method)
       def setup_proxy_jump(ssh_options)
         # Use explicit proxy_jump if provided
         if @options[:proxy_jump]
           @logger.debug("Using explicit proxy jump: #{@options[:proxy_jump]}")
-          ssh_options[:proxy_jump] = @options[:proxy_jump]
+          ssh_options[:proxy] = @options[:proxy_jump]
           return
         end
         
@@ -258,24 +289,40 @@ module TrainPlugins
           end
           
           @logger.debug("Generated proxy jump: #{proxy_jump}")
-          ssh_options[:proxy_jump] = proxy_jump
+          # Try different proxy option names for Net::SSH
+          ssh_options[:proxy] = proxy_jump
         end
       rescue => e
         @logger.error("Failed to setup proxy jump: #{e.message}")
         raise Train::TransportError, "Proxy jump setup failed: #{e.message}"
       end
       
-      # Generate SSH proxy command for bastion host
-      # Following Train SSH transport pattern
-      def generate_bastion_proxy_command
+      # Create temporary SSH_ASKPASS script for automated password authentication
+      def create_ssh_askpass_script(password)
+        require 'tempfile'
+        
+        script = Tempfile.new(['ssh_askpass', '.sh'])
+        script.write("#!/bin/bash\necho '#{password}'\n")
+        script.close
+        File.chmod(0755, script.path)
+        
+        @logger.debug("Created SSH_ASKPASS script at #{script.path}")
+        script.path
+      end
+      
+      # Generate SSH proxy command for bastion host using ProxyJump (-J)
+      def generate_bastion_proxy_command(bastion_user, bastion_port)
         args = ['ssh']
         
-        # SSH options for bastion connection
+        # SSH options for connection
         args += ['-o', 'UserKnownHostsFile=/dev/null']
         args += ['-o', 'StrictHostKeyChecking=no']
         args += ['-o', 'LogLevel=ERROR']
         args += ['-o', 'ForwardAgent=no']
-        args += ['-o', 'IdentitiesOnly=yes']
+        
+        # Use ProxyJump (-J) which handles password authentication properly
+        jump_host = bastion_port == 22 ? "#{bastion_user}@#{@options[:bastion_host]}" : "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
+        args += ['-J', jump_host]
         
         # Add SSH keys if specified
         if @options[:key_files]
@@ -284,14 +331,10 @@ module TrainPlugins
           end
         end
         
-        # Bastion connection details
-        args += ["#{@options[:bastion_user]}@#{@options[:bastion_host]}"]
-        args += ['-p', @options[:bastion_port].to_s]
-        args += ['-W', '%h:%p']  # SSH ProxyCommand format
+        # Target connection - %h and %p will be replaced by Net::SSH
+        args += ['%h', '-p', '%p']
         
-        proxy_command = args.join(' ')
-        @logger.debug("Generated bastion proxy command: #{proxy_command}")
-        proxy_command
+        args.join(' ')
       end
       
       # Mock command execution for testing
@@ -343,22 +386,6 @@ module TrainPlugins
       ].freeze
     end
     
-    # Juniper-specific SSH connection wrapper
-    class JuniperSSHConnection
-      def initialize(ssh_session, logger)
-        @ssh_session = ssh_session
-        @logger = logger
-      end
-      
-      def run_command(cmd)
-        @logger.debug("Executing via SSH: #{cmd}")
-        output = @ssh_session.exec!(cmd)
-        CommandResult.new(output || "", 0)
-      rescue => e
-        @logger.error("SSH command failed: #{e.message}")
-        CommandResult.new("", 1, e.message)
-      end
-    end
     
     # Wrapper for command execution results
     class CommandResult

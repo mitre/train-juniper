@@ -41,9 +41,18 @@ if ENV['JUMPBOX_HOST'] && ENV['JUMPBOX_USER']
   puts "Proxy authentication: #{options[:proxy_password] ? 'password configured' : 'no password'}"
 end
 
+# Re-enable jumpbox using the WORKING approach from old version
+if ENV['JUNIPER_BASTION_HOST'] && ENV['JUNIPER_BASTION_USER']
+  options[:proxy_jump] = "#{ENV['JUNIPER_BASTION_USER']}@#{ENV['JUNIPER_BASTION_HOST']}"
+  options[:proxy_password] = ENV['JUNIPER_PASSWORD'] if ENV['JUNIPER_PASSWORD']  # Use same password
+  puts "Using jumpbox: #{ENV['JUNIPER_BASTION_USER']}@#{ENV['JUNIPER_BASTION_HOST']}"
+  puts "Proxy jump string: #{options[:proxy_jump]}"
+  puts "Proxy authentication: #{options[:proxy_password] ? 'password configured' : 'no password'}"
+end
+
 puts "Testing train-juniper plugin connection..."
 puts "Connecting to #{options[:host]}:#{options[:port]} as #{options[:user]}"
-puts "Connection options: #{options.reject { |k,v| k == :password }.inspect}"
+puts "Connection options: #{options.reject { |k,v| [:password, :proxy_password].include?(k) }.inspect}"
 
 begin
   puts "\n=== Creating Train transport ==="

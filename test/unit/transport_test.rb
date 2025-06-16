@@ -52,7 +52,7 @@ describe TrainPlugins::Juniper::Transport do
     it "should have correct default values" do
       defaults = transport.class.default_options
       _(defaults[:port][:default]).must_equal(22)
-      _(defaults[:bastion_user][:default]).must_equal("root")
+      _(defaults[:bastion_user][:default]).must_be_nil  # Changed to nil for env var support
       _(defaults[:bastion_port][:default]).must_equal(22)
       _(defaults[:timeout][:default]).must_equal(30)
       _(defaults[:keepalive][:default]).must_equal(true)
