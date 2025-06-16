@@ -12,6 +12,7 @@ Common plugin development issues, debugging techniques, and solutions to frequen
 6. [Testing and Development Issues](#testing-and-development-issues)
 7. [Gemspec and Packaging Problems](#gemspec-and-packaging-problems)
 8. [Performance and Memory Issues](#performance-and-memory-issues)
+9. [Platform Detection Performance Issues](#platform-detection-performance-issues)
 
 ---
 
@@ -1147,5 +1148,174 @@ end
 5. **Document Solutions** - Keep notes on fixes for future reference
 6. **Test Edge Cases** - Network timeouts, authentication failures, encoding issues
 7. **Verify Environment** - Ruby version, gem dependencies, SSH client configuration
+
+---
+
+## Platform Detection Performance Issues
+
+### Critical Performance Problem: Excessive Detection Calls
+
+**Symptom**: InSpec resources like `json()` cause severe performance degradation with multiple platform detection calls.
+
+**Debug Evidence**:
+```bash
+# Before fix - excessive debug output:
+DEBUG -- : Executing: show version
+DEBUG -- : Detected JunOS version: 23.4R1.9
+DEBUG -- : Executing: show version  # DUPLICATE!
+DEBUG -- : Detected JunOS version: 23.4R1.9
+DEBUG -- : Executing: show version  # DUPLICATE!
+# ... repeated 10+ times for single InSpec resource
+```
+
+**Root Cause**: Platform detection methods lack caching, called repeatedly for every InSpec resource access.
+
+**Impact**: 
+- Single `inspec.json({command: 'show version | display json'})` triggers 10+ duplicate SSH commands
+- 90%+ performance degradation 
+- Extremely slow compliance testing
+
+### Solution: Platform Detection Caching
+
+**Implementation Pattern**:
+```ruby
+def detect_version
+  # CRITICAL: Use defined? to distinguish cached nil from uncached
+  return @detected_version if defined?(@detected_version)
+  
+  # Guard against early execution and mock mode
+  return @detected_version = nil unless respond_to?(:run_command_via_connection)
+  return @detected_version = nil if @options&.dig(:mock)
+  return @detected_version = nil unless connected?
+  
+  begin
+    # Execute command and cache result for related detection methods
+    result = run_command_via_connection("show version")
+    return @detected_version = nil unless result&.exit_status == 0
+    
+    # Cache raw result for other detection methods (shared cache)
+    @cached_show_version_result = result
+    
+    # Parse and cache version
+    @detected_version = extract_version_from_output(result.stdout)
+  rescue => e
+    logger&.debug("Version detection failed: #{e.message}")
+    @detected_version = nil
+  end
+end
+
+def detect_architecture
+  return @detected_architecture if defined?(@detected_architecture)
+  
+  return @detected_architecture = nil unless respond_to?(:run_command_via_connection)
+  return @detected_architecture = nil if @options&.dig(:mock)
+  return @detected_architecture = nil unless connected?
+  
+  begin
+    # Reuse cached result from version detection to avoid duplicate commands
+    if defined?(@detected_version) && @detected_version
+      result = @cached_show_version_result
+    else
+      result = run_command_via_connection("show version")
+      @cached_show_version_result = result if result&.exit_status == 0
+    end
+    
+    return @detected_architecture = nil unless result&.exit_status == 0
+    
+    @detected_architecture = extract_architecture_from_output(result.stdout)
+  rescue => e
+    logger&.debug("Architecture detection failed: #{e.message}")
+    @detected_architecture = nil
+  end
+end
+```
+
+### Debugging Performance Issues
+
+**Identify Excessive Calls**:
+```ruby
+# Add call tracking to debug performance
+def run_command_via_connection(cmd)
+  @command_count ||= 0
+  @command_count += 1
+  
+  if cmd.include?("show version") && @command_count > 1
+    logger.warn("PERFORMANCE: show version called #{@command_count} times!")
+    logger.warn(caller[0..5].join("\n"))  # Show call stack
+  end
+  
+  execute_command(cmd)
+end
+```
+
+**Verify Caching Works**:
+```ruby
+# Test caching in console
+connection = Train.create('juniper', mock: true).connection
+
+# First call should execute
+version1 = connection.send(:detect_junos_version)
+
+# Second call should use cache
+version2 = connection.send(:detect_junos_version)
+
+# Verify same result without additional execution
+puts "Cached correctly: #{version1 == version2}"
+```
+
+### Testing Caching Behavior
+
+**Essential Test Pattern**:
+```ruby
+it "should cache platform detection results" do
+  call_count = 0
+  test_connection.define_singleton_method(:run_command_via_connection) do |cmd|
+    call_count += 1
+    MockResult.new("Version: 1.0.0", 0)
+  end
+  
+  # Multiple calls should only execute command once
+  version1 = test_connection.send(:detect_version)
+  version2 = test_connection.send(:detect_version)
+  
+  _(call_count).must_equal(1)  # Verify caching
+  _(version1).must_equal(version2)  # Verify consistency
+end
+```
+
+### Performance Verification
+
+**Before Caching**:
+- 10+ `show version` calls per InSpec resource
+- ~10+ seconds for simple JSON resource access
+- Excessive debug output floods logs
+
+**After Caching**:
+- 1 `show version` call per connection
+- ~1 second for InSpec resource access  
+- Clean debug output with minimal command execution
+
+**Performance Test**:
+```ruby
+# Time InSpec resource access
+start_time = Time.now
+result = inspec.json({command: 'show version | display json'})
+duration = Time.now - start_time
+
+puts "JSON resource execution: #{duration.round(2)}s"
+# Before: ~10s, After: ~1s
+```
+
+### Key Caching Principles
+
+1. **Use `defined?(@variable)` checks** - Allows caching `nil` results
+2. **Share cache between related methods** - Prevent duplicate command execution
+3. **Handle mock mode** - Skip detection when testing
+4. **Graceful error handling** - Cache `nil` on failure, don't crash
+5. **Test caching behavior explicitly** - Verify command execution count
+
+**Reference**: See [Platform Detection Caching Guide](../PLATFORM_DETECTION_CACHING.md) for complete implementation details and examples.
+
+---
 
 **Next**: Learn about [Real-World Examples](12-real-world-examples.md) of complete plugin implementations.

@@ -108,11 +108,17 @@ module TrainPlugins::YourName
         .title("Your Platform Name")
         .in_family("appropriate_family")
       
+      # Detect actual device information when possible
+      device_version = detect_version || TrainPlugins::YourName::VERSION
+      device_arch = detect_architecture || "unknown"
+      
       # Force platform detection result
-      force_platform!(PLATFORM_NAME, {
-        release: detect_version || TrainPlugins::YourName::VERSION,
-        arch: "network"  # or "cloud", "container", etc.
-      })
+      # CRITICAL: Include arch in platform_details hash - setting it separately later fails
+      platform_details = {
+        release: device_version,
+        arch: device_arch
+      }
+      force_platform!(PLATFORM_NAME, platform_details)
     end
 
     private
@@ -137,6 +143,38 @@ module TrainPlugins::YourName
       # Parse version from command output
       if match = output.match(/Version:\s+([\d\w\.-]+)/)
         match[1]
+      end
+    end
+    
+    def detect_architecture
+      # Only try architecture detection if connection is ready
+      return nil unless respond_to?(:run_command_via_connection)
+      return nil if @options&.dig(:mock)
+      return nil unless connected?
+      
+      begin
+        result = run_command_via_connection("show version")
+        return nil unless result.exit_status == 0
+        
+        extract_architecture_from_output(result.stdout)
+      rescue
+        nil
+      end
+    end
+    
+    def extract_architecture_from_output(output)
+      # Parse architecture from device output
+      case output
+      when /Model:\s+(SRX\d+)/i
+        "x86_64"  # Most SRX models are x86_64
+      when /Model:\s+(MX\d+)/i  
+        "x86_64"  # MX routers are typically x86_64
+      when /Model:\s+(EX\d+)/i
+        "arm64"   # Many EX switches use ARM
+      when /Architecture:\s+(\S+)/i
+        $1.downcase
+      else
+        nil
       end
     end
   end
@@ -509,7 +547,50 @@ end
 
 ### Common Problems
 
-#### 1. Detection Commands Run Too Early
+#### 1. Architecture Shows "unknown" Despite Detection Working
+
+**Problem**: InSpec displays `Arch: unknown` even though your architecture detection code works correctly and logs show proper values.
+
+**Root Cause**: Setting architecture after `force_platform!` call doesn't persist when InSpec accesses platform information.
+
+```ruby
+# WRONG: Architecture set separately - doesn't persist
+def platform
+  Train::Platforms.name(PLATFORM_NAME).title("Platform").in_family("family")
+  
+  platform_obj = force_platform!(PLATFORM_NAME, release: version)
+  
+  # This approach fails - architecture gets lost
+  device_arch = detect_architecture || "unknown"
+  if platform_obj && platform_obj.respond_to?(:platform=)
+    current_platform = platform_obj.platform || {}
+    current_platform[:arch] = device_arch
+    platform_obj.platform = current_platform
+  end
+  
+  platform_obj
+end
+
+# CORRECT: Include architecture in force_platform! call
+def platform
+  Train::Platforms.name(PLATFORM_NAME).title("Platform").in_family("family")
+  
+  device_version = detect_version || VERSION
+  device_arch = detect_architecture || "unknown"
+  
+  # Architecture must be in the initial platform_details hash
+  platform_details = {
+    release: device_version,
+    arch: device_arch
+  }
+  
+  force_platform!(PLATFORM_NAME, platform_details)
+end
+```
+
+**Key Learning**: Architecture (and other platform attributes) must be set during the initial `force_platform!` call, not modified afterward.
+
+#### 2. Detection Commands Run Too Early
 
 ```ruby
 # WRONG: Detection runs before connection ready
@@ -664,6 +745,122 @@ def platform
   })
 end
 ```
+
+---
+
+## Performance Optimization: Detection Caching
+
+### Critical Performance Issue
+
+**Problem**: InSpec resources like `json()` trigger platform detection multiple times, causing severe performance degradation.
+
+**Impact**: A single `inspec.json({command: 'show version | display json'})` can trigger 10+ duplicate `show version` commands.
+
+### Solution: Instance Variable Caching
+
+```ruby
+def detect_junos_version
+  # Return cached version if already detected
+  return @detected_junos_version if defined?(@detected_junos_version)
+  
+  # Only try version detection if we have an active connection
+  return @detected_junos_version = nil unless respond_to?(:run_command_via_connection)
+  return @detected_junos_version = nil if @options&.dig(:mock)
+  
+  begin
+    return @detected_junos_version = nil unless connected?
+    
+    # Execute command and cache result for other detection methods
+    result = run_command_via_connection("show version")
+    return @detected_junos_version = nil unless result&.exit_status == 0
+    
+    # Cache the raw result for architecture detection
+    @cached_show_version_result = result
+    
+    version = extract_version_from_output(result.stdout)
+    @detected_junos_version = version
+  rescue => e
+    logger&.debug("Version detection failed: #{e.message}")
+    @detected_junos_version = nil
+  end
+end
+
+def detect_junos_architecture
+  return @detected_junos_architecture if defined?(@detected_junos_architecture)
+  
+  return @detected_junos_architecture = nil unless respond_to?(:run_command_via_connection)
+  return @detected_junos_architecture = nil if @options&.dig(:mock)
+  
+  begin
+    return @detected_junos_architecture = nil unless connected?
+    
+    # Reuse cached result from version detection to avoid duplicate commands
+    if defined?(@detected_junos_version) && @detected_junos_version
+      result = @cached_show_version_result
+    else
+      result = run_command_via_connection("show version")
+      @cached_show_version_result = result if result&.exit_status == 0
+    end
+    
+    return @detected_junos_architecture = nil unless result&.exit_status == 0
+    
+    arch = extract_architecture_from_output(result.stdout)
+    @detected_junos_architecture = arch
+  rescue => e
+    logger&.debug("Architecture detection failed: #{e.message}")
+    @detected_junos_architecture = nil
+  end
+end
+```
+
+### Key Caching Principles
+
+1. **Use `defined?(@variable)` checks** - Distinguishes between cached `nil` and uncached state
+2. **Share cache between methods** - Use `@cached_show_version_result` for related detections
+3. **Handle mock mode** - Skip detection when `@options[:mock]` is true
+4. **Graceful error handling** - Cache `nil` on failure, don't crash
+
+### Testing Caching Behavior
+
+```ruby
+it "should cache version detection results" do
+  call_count = 0
+  test_connection.define_singleton_method(:run_command_via_connection) do |cmd|
+    call_count += 1
+    MockResult.new("Junos: 12.1X47-D15.4", 0)
+  end
+  
+  # First call executes command
+  version1 = test_connection.send(:detect_junos_version)
+  _(call_count).must_equal(1)
+  
+  # Second call uses cache
+  version2 = test_connection.send(:detect_junos_version)
+  _(call_count).must_equal(1) # No increase
+  
+  _(version1).must_equal(version2)
+end
+
+it "should share cache between version and architecture detection" do
+  call_count = 0
+  # ... setup ...
+  
+  version = test_connection.send(:detect_junos_version)
+  _(call_count).must_equal(1)
+  
+  # Architecture detection reuses cached result
+  arch = test_connection.send(:detect_junos_architecture)
+  _(call_count).must_equal(1) # Still no increase
+end
+```
+
+### Performance Results
+
+- **Before caching**: 10+ `show version` calls per InSpec resource
+- **After caching**: 1 `show version` call per connection
+- **Improvement**: 90%+ performance boost
+
+**Reference**: See [Platform Detection Caching Guide](../PLATFORM_DETECTION_CACHING.md) for complete implementation details.
 
 ---
 

@@ -202,8 +202,53 @@ inspec shell -t transport://
 - **train-habitat**: Minimal dependency approach
 - **InSpec Issue Search**: Search for "fatal: not a git repository" for related issues
 
+## Critical Platform Detection Discovery
+
+During dependency debugging, we discovered a **critical platform detection issue** unrelated to dependencies:
+
+**Problem**: InSpec shows `Arch: unknown` even when architecture detection works correctly and debug logs show proper values.
+
+**Root Cause**: Setting platform attributes (like `arch`) after `force_platform!` call doesn't persist when InSpec accesses platform information multiple times.
+
+**Solution**: Include all platform attributes in the initial `force_platform!` call:
+
+```ruby
+# WRONG - Architecture gets lost despite working detection
+def platform
+  Train::Platforms.name(PLATFORM_NAME).title("Platform").in_family("family")
+  
+  platform_obj = force_platform!(PLATFORM_NAME, release: version)
+  
+  # This approach fails - InSpec calls platform method multiple times
+  device_arch = detect_architecture || "unknown"  # Works correctly!
+  platform_obj.platform[:arch] = device_arch      # But this gets lost!
+  
+  platform_obj
+end
+
+# CORRECT - Architecture persists across multiple platform method calls  
+def platform
+  Train::Platforms.name(PLATFORM_NAME).title("Platform").in_family("family")
+  
+  device_version = detect_version || VERSION
+  device_arch = detect_architecture || "unknown"
+  
+  # All attributes must be in the initial platform_details hash
+  platform_details = {
+    release: device_version,
+    arch: device_arch
+  }
+  
+  force_platform!(PLATFORM_NAME, platform_details)
+end
+```
+
+**Debug Evidence**: Logs showed architecture detection working perfectly (`Detected device architecture: x86_64`) and platform data being set correctly (`Set platform data: {:release=>"23.4R1.9", :arch=>"x86_64"}`), but InSpec still displayed `Arch: unknown`.
+
+**Key Insight**: Train's platform system doesn't preserve modifications made after the initial `force_platform!` call when InSpec accesses platform information multiple times.
+
 ## Conclusion
 
 The key insight is that **Train plugin stability comes from matching official patterns exactly** rather than trying to innovate on dependency management. The Train ecosystem has established patterns that work - deviation leads to conflicts and crashes.
 
-**Most importantly:** What appear to be complex technical issues often resolve by simply following train-core's dependency patterns precisely.
+**Most importantly:** What appear to be complex technical issues often resolve by simply following train-core's dependency patterns precisely. Additionally, platform attributes must be set during initial platform creation, not modified afterward.
