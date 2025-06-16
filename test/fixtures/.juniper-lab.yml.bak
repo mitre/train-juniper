@@ -1,0 +1,49 @@
+# containerlab topology for train-juniper testing
+# Phase 1: Mock Juniper for immediate development
+# Phase 2: Replace with real cRPD when available
+
+name: train-juniper-test
+
+topology:
+  nodes:
+    mock-vsrx:
+      kind: linux
+      image: rastasheep/ubuntu-sshd:18.04
+      mgmt-ipv4: 172.20.20.10
+      env:
+        SSH_ENABLE_PASSWORD_AUTH: "true"
+      exec:
+        - bash -c "echo 'admin:admin123' | chpasswd"
+        - bash -c "useradd -m admin && echo 'admin:admin123' | chpasswd"
+        - bash -c "cat > /usr/local/bin/show << 'EOF'
+#!/bin/bash
+case \"$1 $2\" in
+  \"version\"|\"version \")
+    echo \"Hostname: mock-vsrx\"
+    echo \"Model: vSRX\"
+    echo \"Junos: 23.2R1.13\"
+    echo \"JUNOS Software Release [23.2R1.13]\"
+    ;;
+  \"chassis hardware\")
+    echo \"Hardware inventory:\"
+    echo \"Item             Version  Part number  Serial number     Description\"
+    echo \"Chassis                                JN123456          vSRX\"
+    ;;
+  \"interfaces terse\")
+    echo \"Interface               Admin Link Proto    Local                 Remote\"
+    echo \"ge-0/0/0                up    up\"
+    echo \"ge-0/0/0.0              up    up   inet     192.168.1.1/24\"
+    echo \"lo0                     up    up\"
+    ;;
+  *)
+    echo \"Unknown command: show $*\"
+    echo \"% Invalid input detected at '^' marker.\"
+    exit 1
+    ;;
+esac
+EOF"
+        - chmod +x /usr/local/bin/show
+
+  mgmt:
+    network: train-mgmt
+    ipv4-subnet: 172.20.20.0/24

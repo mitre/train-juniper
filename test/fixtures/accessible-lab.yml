@@ -1,0 +1,15 @@
+name: train-juniper-test
+
+topology:
+  nodes:
+    mock-vsrx:
+      kind: linux
+      image: rastasheep/ubuntu-sshd:18.04
+      ports:
+        - "2222:22"  # Map container SSH to host port 2222
+      env:
+        SSH_ENABLE_PASSWORD_AUTH: "true"
+      exec:
+        - useradd -m admin || true
+        - echo 'admin:admin123' | chpasswd
+        - echo 'root:admin123' | chpasswd

@@ -1,0 +1,18 @@
+name: train-juniper-test
+
+mgmt:
+  network: train-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  nodes:
+    mock-vsrx:
+      kind: linux
+      image: rastasheep/ubuntu-sshd:18.04
+      mgmt-ipv4: 172.20.20.10
+      env:
+        SSH_ENABLE_PASSWORD_AUTH: "true"
+      exec:
+        - useradd -m admin || true
+        - echo 'admin:admin123' | chpasswd
+        - echo 'root:admin123' | chpasswd

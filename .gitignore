@@ -1,0 +1,45 @@
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/spec/examples.txt
+/test/tmp/
+/test/version_tmp/
+/tmp/
+
+# Environment files with credentials
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Testing infrastructure artifacts
+test/infrastructure/vrnetlab/**/*.qcow2
+test/infrastructure/vrnetlab/**/*.vmdk
+test/infrastructure/vrnetlab/**/*.iso
+test/infrastructure/vrnetlab/**/docker-image
+test/infrastructure/vrnetlab/**/build.log
+
+# Container lab artifacts
+clab-*/
+.clab/
+*.clab.yml.bak
+
+# Testing infrastructure (has its own git repo)
+test/infrastructure/vrnetlab/
+
+# Environment and context files
+.env
+*CLAUDE*
+recovery-prompt.md
+SESSION-SUMMARY.md
+TODAY-COMPLETION-MATRIX.md
+TODO-MATRIX.md

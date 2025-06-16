@@ -1,0 +1,14 @@
+name: train-juniper-real
+
+mgmt:
+  network: train-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  nodes:
+    vsrx1:
+      kind: juniper_vsrx
+      image: vrnetlab/juniper_vsrx:23.2R2.21
+      mgmt-ipv4: 172.20.20.10
+      ports:
+        - "2323:22"    # vSRX SSH access from macOS (avoiding VM SSH port)

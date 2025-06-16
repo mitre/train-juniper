@@ -1,0 +1,38 @@
+version: '3.8'
+services:
+  vsrx:
+    # Real Juniper vSRX container using Boxen/vrnetlab
+    # This provides authentic JunOS behavior for testing
+    image: vrnetlab/vr-vsrx:20.4R3.8
+    ports:
+      - "2022:22"    # SSH
+      - "2830:830"   # NETCONF
+    environment:
+      - USERNAME=admin
+      - PASSWORD=admin123
+      - CONNECTION_MODE=vrnetlab
+    # vSRX requires elevated privileges for KVM
+    privileged: true
+    volumes:
+      - /dev/kvm:/dev/kvm
+    
+  # Fallback: Simple mock for development when vSRX image unavailable
+  vsrx-mock:
+    # Only use this if vrnetlab/vr-vsrx is not available
+    image: rastasheep/ubuntu-sshd:18.04
+    ports:
+      - "2222:22"
+    environment:
+      SSH_ENABLE_PASSWORD_AUTH: "true"
+    volumes:
+      - ./juniper-simulator.sh:/tmp/juniper-simulator.sh:ro
+    command: >
+      bash -c "
+        echo 'admin:admin123' | chpasswd &&
+        cp /tmp/juniper-simulator.sh /usr/local/bin/juniper-simulator.sh &&
+        chmod +x /usr/local/bin/juniper-simulator.sh &&
+        ln -sf /usr/local/bin/juniper-simulator.sh /usr/local/bin/show &&
+        /usr/sbin/sshd -D
+      "
+    profiles:
+      - mock
