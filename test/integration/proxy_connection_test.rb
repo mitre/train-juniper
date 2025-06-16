@@ -86,15 +86,16 @@ describe "Juniper Plugin Proxy Integration" do
       _(config[:proxy_command]).must_equal("ssh jump.host -W %h:%p")
     end
     
-    it "should parse juniper URI with proxy_jump parameters" do
-      uri = "juniper://admin@device.local?proxy_jump=user@bastion.host&proxy_password=secret"
+    it "should parse juniper URI with bastion_password parameter" do
+      uri = "juniper://admin@device.local?bastion_host=jump.host&bastion_user=netadmin&bastion_password=secret"
       config = Train.target_config(target: uri)
       
       _(config[:backend]).must_equal("juniper")
       _(config[:host]).must_equal("device.local")
       _(config[:user]).must_equal("admin")
-      _(config[:proxy_jump]).must_equal("user@bastion.host")
-      _(config[:proxy_password]).must_equal("secret")
+      _(config[:bastion_host]).must_equal("jump.host")
+      _(config[:bastion_user]).must_equal("netadmin")
+      _(config[:bastion_password]).must_equal("secret")
     end
   end
   
@@ -144,40 +145,17 @@ describe "Juniper Plugin Proxy Integration" do
     end
   end
   
-  describe "proxy option precedence" do
+  describe "bastion host configuration" do
     
-    it "should prioritize explicit proxy_jump over bastion_host" do
+    it "should handle bastion host with all options" do
       transport = Train.create('juniper', {
         host: 'device.local',
         user: 'admin',
-        password: 'test_pass',
-        # Both provided - proxy_jump should take precedence
-        proxy_jump: 'explicit@proxy.host',
-        proxy_password: 'proxy_pass',
-        bastion_host: 'ignored.bastion.host',
-        bastion_user: 'ignored_user',
-        mock: true
-      })
-      
-      connection = transport.connection
-      options = connection.instance_variable_get(:@options)
-      
-      # proxy_jump options should be used
-      _(options[:proxy_jump]).must_equal('explicit@proxy.host')
-      _(options[:proxy_password]).must_equal('proxy_pass')
-      
-      # bastion options still exist but are not used for proxy setup
-      _(options[:bastion_host]).must_equal('ignored.bastion.host')
-    end
-    
-    it "should use bastion_host when proxy_jump not provided" do
-      transport = Train.create('juniper', {
-        host: 'device.local',
-        user: 'admin',
-        password: 'test_pass',
+        password: 'device_pass',
         bastion_host: 'bastion.host',
         bastion_user: 'bastion_user',
         bastion_port: 2222,
+        bastion_password: 'bastion_pass',
         mock: true
       })
       
@@ -187,24 +165,28 @@ describe "Juniper Plugin Proxy Integration" do
       _(options[:bastion_host]).must_equal('bastion.host')
       _(options[:bastion_user]).must_equal('bastion_user')
       _(options[:bastion_port]).must_equal(2222)
+      _(options[:bastion_password]).must_equal('bastion_pass')
+      _(options[:password]).must_equal('device_pass')  # Different from bastion password
     end
     
-    it "should handle proxy_jump with password authentication" do
+    it "should fallback to device password for bastion authentication" do
       transport = Train.create('juniper', {
         host: 'device.local',
         user: 'admin',
-        password: 'device_pass',
-        proxy_jump: 'proxy_user@proxy.host',
-        proxy_password: 'proxy_pass',
+        password: 'shared_pass',
+        bastion_host: 'bastion.host',
+        bastion_user: 'bastion_user',
+        # No bastion_password - should use device password
         mock: true
       })
       
       connection = transport.connection
       options = connection.instance_variable_get(:@options)
       
-      _(options[:proxy_jump]).must_equal('proxy_user@proxy.host')
-      _(options[:proxy_password]).must_equal('proxy_pass')
-      _(options[:password]).must_equal('device_pass')  # Different from proxy password
+      _(options[:bastion_host]).must_equal('bastion.host')
+      _(options[:bastion_user]).must_equal('bastion_user')
+      _(options[:password]).must_equal('shared_pass')
+      _(options[:bastion_password]).must_be_nil  # Not explicitly set
     end
   end
   

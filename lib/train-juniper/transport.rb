@@ -20,8 +20,8 @@ module TrainPlugins
       option :bastion_host, default: nil
       option :bastion_user, default: nil  # Let connection handle env vars and defaults
       option :bastion_port, default: 22
+      option :bastion_password, default: nil  # Separate password for bastion authentication
       option :proxy_command, default: nil
-      option :proxy_jump, default: nil
       
       # SSH key authentication options
       option :key_files, default: nil

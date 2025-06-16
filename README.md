@@ -68,22 +68,23 @@ inspec> command('show version').stdout
 ### With Bastion Host (Jump Host)
 
 ```bash
-# Modern approach using proxy_jump (recommended)
-$ inspec shell -t "juniper://admin@10.1.1.1?proxy_jump=netadmin@jump.example.com&proxy_password=jumppass"
+# Using Train standard bastion host options
+$ inspec shell -t "juniper://admin@10.1.1.1?bastion_host=jump.example.com&bastion_user=netadmin&bastion_password=jumppass"
 
-# Legacy approach using bastion_host (auto-converted to proxy_jump)
-$ inspec shell -t "juniper://admin@10.1.1.1?bastion_host=jump.example.com&bastion_user=netadmin&bastion_port=2222"
+# With custom port
+$ inspec shell -t "juniper://admin@10.1.1.1?bastion_host=jump.example.com&bastion_user=netadmin&bastion_port=2222&bastion_password=jumppass"
 
-# Using environment variables (bastion approach)
+# Using environment variables (recommended for automation)
 export JUNIPER_BASTION_HOST=jump.example.com
 export JUNIPER_BASTION_USER=netadmin  
-export JUNIPER_PASSWORD=shared_password  # Used for both bastion and device
+export JUNIPER_BASTION_PASSWORD=jump_password
+export JUNIPER_PASSWORD=device_password
 $ inspec shell -t juniper://admin@10.1.1.1
 
-# Using environment variables (proxy_jump approach)
-export JUNIPER_PROXY_JUMP=netadmin@jump.example.com
-export JUNIPER_PROXY_PASSWORD=jump_password
-export JUNIPER_PASSWORD=device_password
+# Same password for both bastion and device (common scenario)
+export JUNIPER_BASTION_HOST=jump.example.com
+export JUNIPER_BASTION_USER=admin
+export JUNIPER_PASSWORD=shared_password  # Used for both when bastion_password not set
 $ inspec shell -t juniper://admin@10.1.1.1
 ```
 
@@ -114,6 +115,7 @@ export JUNIPER_USER=netadmin
 export JUNIPER_PASSWORD=devicepass
 export JUNIPER_BASTION_HOST=jump.corp.com
 export JUNIPER_BASTION_USER=admin
+export JUNIPER_BASTION_PASSWORD=bastionpass
 inspec detect -t juniper://  # Automatically uses bastion!
 
 # Using .env file (recommended for development)
@@ -143,16 +145,15 @@ inspec detect -t juniper://  # Reads from .env automatically
 | `bastion_host` | SSH bastion/jump host | - | `JUNIPER_BASTION_HOST` |
 | `bastion_user` | SSH bastion username | root | `JUNIPER_BASTION_USER` |
 | `bastion_port` | SSH bastion port | 22 | `JUNIPER_BASTION_PORT` |
+| `bastion_password` | Password for bastion authentication | - | `JUNIPER_BASTION_PASSWORD` |
 | `proxy_command` | Custom SSH ProxyCommand | - | `JUNIPER_PROXY_COMMAND` |
-| `proxy_jump` | Modern SSH proxy jump (recommended) | - | `JUNIPER_PROXY_JUMP` |
-| `proxy_password` | Password for proxy authentication | - | `JUNIPER_PROXY_PASSWORD` |
 | `key_files` | SSH private key files | - | - |
 | `keys_only` | Use only specified keys | false | - |
 
 **Notes**: 
 - Cannot specify both `bastion_host` and `proxy_command` simultaneously
-- `proxy_jump` takes precedence over `bastion_host` if both are provided
-- `proxy_jump` supports automated password authentication via SSH_ASKPASS
+- If `bastion_password` not provided, falls back to using `password` for bastion authentication
+- Supports automated password authentication via SSH_ASKPASS mechanism
 
 ### InSpec Configuration File
 

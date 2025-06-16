@@ -147,23 +147,32 @@ module TrainPlugins
             ssh_options[:keys_only] = @options[:keys_only]
           end
           
-          # Add proxy support if configured  
-          if @options[:proxy_jump]
+          # Add bastion host support if configured
+          if @options[:bastion_host]
             require 'net/ssh/proxy/jump'
             
-            # Set up automated password authentication via SSH_ASKPASS
-            if @options[:proxy_password]
-              # Create temporary SSH_ASKPASS script for automated password input
-              @ssh_askpass_script = create_ssh_askpass_script(@options[:proxy_password])
-              ENV['SSH_ASKPASS'] = @ssh_askpass_script
-              ENV['SSH_ASKPASS_REQUIRE'] = 'force'  # Force use of SSH_ASKPASS even with terminal
-              @logger.debug("Configured SSH_ASKPASS for automated proxy authentication")
+            # Build proxy jump string from bastion options
+            bastion_user = @options[:bastion_user] || 'root'
+            bastion_port = @options[:bastion_port] || 22
+            
+            proxy_jump = if bastion_port == 22
+              "#{bastion_user}@#{@options[:bastion_host]}"
+            else
+              "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
             end
             
-            ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(@options[:proxy_jump])
-            @logger.debug("Using proxy jump: #{@options[:proxy_jump]}")
-          elsif @options[:bastion_host]
-            setup_proxy_jump(ssh_options)
+            @logger.debug("Using bastion host: #{proxy_jump}")
+            
+            # Set up automated password authentication via SSH_ASKPASS
+            bastion_password = @options[:bastion_password] || @options[:password]  # Use explicit bastion password or fallback
+            if bastion_password
+              @ssh_askpass_script = create_ssh_askpass_script(bastion_password)
+              ENV['SSH_ASKPASS'] = @ssh_askpass_script
+              ENV['SSH_ASKPASS_REQUIRE'] = 'force'  # Force use of SSH_ASKPASS even with terminal
+              @logger.debug("Configured SSH_ASKPASS for automated bastion authentication")
+            end
+            
+            ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
           end
           
           @logger.debug("Connecting to #{@options[:host]}:#{@options[:port]} as #{@options[:user]}")
@@ -268,50 +277,6 @@ module TrainPlugins
         end
       end
       
-      # Setup proxy jump using Net::SSH::Proxy::Jump with SSH_ASKPASS automation
-      def setup_proxy_jump(ssh_options)
-        proxy_jump = nil
-        password_for_proxy = nil
-        
-        # Use explicit proxy_jump if provided (highest priority)
-        if @options[:proxy_jump]
-          proxy_jump = @options[:proxy_jump]
-          password_for_proxy = @options[:proxy_password] # Use explicit proxy password if provided
-          @logger.debug("Using explicit proxy jump: #{proxy_jump}")
-        # Otherwise generate proxy jump from bastion_host options
-        elsif @options[:bastion_host]
-          bastion_user = @options[:bastion_user] || 'root'
-          bastion_port = @options[:bastion_port] || 22
-          
-          if bastion_port == 22
-            proxy_jump = "#{bastion_user}@#{@options[:bastion_host]}"
-          else
-            proxy_jump = "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
-          end
-          
-          password_for_proxy = @options[:password]  # Use same password for bastion
-          @logger.debug("Generated proxy jump from bastion_host: #{proxy_jump}")
-        end
-        
-        # Set up proxy if we have one
-        if proxy_jump
-          # Set up automated password authentication via SSH_ASKPASS if password provided
-          if password_for_proxy
-            @ssh_askpass_script = create_ssh_askpass_script(password_for_proxy)
-            ENV['SSH_ASKPASS'] = @ssh_askpass_script
-            ENV['SSH_ASKPASS_REQUIRE'] = 'force'
-            @logger.debug("Configured SSH_ASKPASS for automated proxy authentication")
-          end
-          
-          # Use Net::SSH::Proxy::Jump for proper proxy support
-          require 'net/ssh/proxy/jump'
-          ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
-          @logger.debug("Using proxy jump: #{proxy_jump}")
-        end
-      rescue => e
-        @logger.error("Failed to setup proxy jump: #{e.message}")
-        raise Train::TransportError, "Proxy jump setup failed: #{e.message}"
-      end
       
       # Create temporary SSH_ASKPASS script for automated password authentication
       def create_ssh_askpass_script(password)

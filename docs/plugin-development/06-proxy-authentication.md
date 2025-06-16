@@ -5,13 +5,13 @@ Implementing enterprise-ready proxy/bastion support and authentication patterns 
 ## Table of Contents
 
 1. [Why Enterprise Features Matter](#why-enterprise-features-matter)
-2. [Train Standard Proxy Options](#train-standard-proxy-options)
-3. [Bastion Host Implementation](#bastion-host-implementation)
-4. [Custom Proxy Commands](#custom-proxy-commands)
-5. [Authentication Patterns](#authentication-patterns)
-6. [Environment Variable Support](#environment-variable-support)
-7. [Real-World Enterprise Scenarios](#real-world-enterprise-scenarios)
-8. [Testing Proxy Configurations](#testing-proxy-configurations)
+2. [Command Execution Security](#command-execution-security)
+3. [Two Implementation Approaches](#two-implementation-approaches)
+4. [Train Standard SSH Transport (Recommended)](#train-standard-ssh-transport-recommended)
+5. [Custom SSH Implementation (Advanced)](#custom-ssh-implementation-advanced)
+6. [Bastion Host Configuration](#bastion-host-configuration)
+7. [Environment Variable Support](#environment-variable-support)
+8. [Testing and Validation](#testing-and-validation)
 
 ---
 
@@ -44,11 +44,224 @@ inspec detect -t "yourname://operator@firewall.dmz?bastion_host=jump.dmz.corp"
 
 ---
 
-## Train Standard Proxy Options
+## Command Execution Security
 
-Train provides standard proxy options that work across all transports. Follow these patterns for consistency:
+⚠️ **CRITICAL**: InSpec's `run_command` must execute on the TARGET device, never on the proxy/jump host or InSpec host.
 
-### Standard Option Names
+### Security Verification
+
+```ruby
+# ✅ CORRECT: Commands execute on TARGET device
+@ssh_session = Net::SSH.start(
+  "target.device.com",     # TARGET device
+  "admin",                 # User on TARGET device
+  proxy: proxy_jump        # Tunnel through jump host
+)
+result = @ssh_session.exec!("show version")  # Executes on target.device.com
+
+# ❌ WRONG: Commands execute on jump host  
+@jump_session = Net::SSH.start("jump.host.com", "user")
+result = @jump_session.exec!("show version")  # Executes on jump.host.com (SECURITY RISK!)
+```
+
+### How Proxy Tunneling Works
+
+1. **First hop**: InSpec host → Jump host (authentication)
+2. **Second hop**: Jump host → Target device (forwarded connection)
+3. **Final session**: Encrypted tunnel directly to target device
+4. **Command execution**: All commands run on target device
+5. **Result tunneling**: Output travels back through jump host to InSpec
+
+### Verification Your Implementation Is Correct
+
+```ruby
+# Test that commands execute on target device
+def verify_target_execution
+  result = connection.run_command("hostname")
+  # Should return target device hostname, NOT jump host hostname
+  
+  platform_result = connection.run_command("show version")  
+  # Should return device-specific output (JunOS, IOS, etc.)
+  # NOT Linux/Unix output from jump host
+end
+```
+
+---
+
+## Two Implementation Approaches
+
+You have two main approaches for implementing proxy support in Train plugins:
+
+### 🟢 **Approach 1: Use Train's Built-in SSH Transport (Recommended)**
+
+**Pros:**
+- ✅ Leverages existing, well-tested Train SSH implementation
+- ✅ Automatic proxy support with no custom code needed
+- ✅ Standard Train options work out-of-the-box
+- ✅ Less code to maintain and debug
+
+**Cons:**
+- ❌ Less control over SSH connection details
+- ❌ May not support device-specific authentication flows
+- ❌ Limited customization for device-specific SSH options
+
+**When to use:** For most network devices with standard SSH behavior.
+
+### 🟡 **Approach 2: Custom SSH Implementation (Advanced)**
+
+**Pros:**
+- ✅ Full control over SSH connection lifecycle
+- ✅ Support for device-specific authentication patterns
+- ✅ Custom prompt handling and session configuration
+- ✅ Fine-grained SSH option control
+
+**Cons:**  
+- ❌ More complex code to implement and maintain
+- ❌ Must handle proxy authentication manually
+- ❌ Higher risk of SSH-related bugs
+
+**When to use:** When you need device-specific SSH behavior (like Juniper CLI configuration, Cisco enable mode, custom prompts).
+
+---
+
+## Train Standard SSH Transport (Recommended)
+
+For most plugins, use Train's existing SSH transport with proxy support.
+
+### Implementation Pattern
+
+```ruby
+# In connection.rb
+class Connection < Train::Plugins::Transport::BaseConnection
+  
+  def initialize(options)
+    @options = options
+    super(@options)
+    
+    # Let Train handle SSH and proxy complexity
+    connect unless @options[:mock]
+  end
+  
+  private
+  
+  def connect
+    # Create SSH transport with all options passed through
+    @train_ssh = Train.create('ssh', @options)
+    @ssh_connection = @train_ssh.connection
+  end
+  
+  def run_command_via_connection(cmd)
+    # Delegate to Train's SSH implementation
+    @ssh_connection.run_command(cmd)
+  end
+end
+```
+
+### Standard Train Options Work Automatically
+
+All Train standard proxy options work automatically when using this approach:
+- `bastion_host`, `bastion_user`, `bastion_port`
+- `proxy_command` 
+- `key_files`, `keys_only`
+
+No additional proxy code needed in your plugin!
+
+---
+
+## Custom SSH Implementation (Advanced)
+
+When you need device-specific SSH behavior, implement custom SSH with manual proxy support.
+
+### Why Juniper Plugin Uses Custom SSH
+
+The train-juniper plugin uses custom SSH implementation because:
+
+1. **Device-specific CLI configuration**: JunOS needs `set cli screen-length 0`
+2. **Custom prompt patterns**: Juniper uses `[%>$#]` prompts vs standard shell prompts  
+3. **SSH_ASKPASS automation**: Non-interactive bastion password authentication
+4. **Session optimization**: Juniper-specific keepalive and timeout settings
+
+### Custom Implementation Pattern
+
+```ruby
+# In connection.rb
+class Connection < Train::Plugins::Transport::BaseConnection
+  
+  def initialize(options)
+    @options = options
+    super(@options)
+    
+    # Custom SSH implementation for device-specific needs
+    connect unless @options[:mock]
+  end
+  
+  private
+  
+  def connect
+    require 'net/ssh'
+    
+    ssh_options = {
+      port: @options[:port] || 22,
+      password: @options[:password],
+      timeout: @options[:timeout] || 30,
+      verify_host_key: :never
+    }
+    
+    # Add bastion support with SSH_ASKPASS automation
+    if @options[:bastion_host]
+      setup_bastion_proxy(ssh_options)
+    end
+    
+    # Connect to TARGET device (not jump host!)
+    @ssh_session = Net::SSH.start(@options[:host], @options[:user], ssh_options)
+    
+    # Device-specific session configuration
+    configure_device_session
+  end
+  
+  def setup_bastion_proxy(ssh_options)
+    require 'net/ssh/proxy/jump'
+    
+    # Build proxy jump string
+    bastion_user = @options[:bastion_user] || 'root'
+    bastion_port = @options[:bastion_port] || 22
+    
+    proxy_jump = if bastion_port == 22
+      "#{bastion_user}@#{@options[:bastion_host]}"
+    else
+      "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
+    end
+    
+    # Automated password authentication via SSH_ASKPASS
+    bastion_password = @options[:bastion_password] || @options[:password]
+    if bastion_password
+      @ssh_askpass_script = create_ssh_askpass_script(bastion_password)
+      ENV['SSH_ASKPASS'] = @ssh_askpass_script
+      ENV['SSH_ASKPASS_REQUIRE'] = 'force'
+    end
+    
+    # CRITICAL: This creates tunnel to TARGET device, not jump host
+    ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
+  end
+  
+  def configure_device_session
+    # Juniper-specific CLI optimization
+    @ssh_session.exec!('set cli screen-length 0')
+    @ssh_session.exec!('set cli screen-width 0')
+    @ssh_session.exec!('set cli complete-on-space off')
+  end
+  
+  def run_command_via_connection(cmd)
+    # Execute on TARGET device through proxy tunnel
+    output = @ssh_session.exec!(cmd)
+    format_device_result(output, cmd)
+  end
+end
+```
+
+### Train Standard Proxy Options
+
+When implementing custom SSH, support these standard Train options for consistency:
 
 ```ruby
 # In transport.rb
@@ -65,11 +278,8 @@ class Transport < Train.plugin(1)
   option :bastion_host, default: nil
   option :bastion_user, default: "root"
   option :bastion_port, default: 22
+  option :bastion_password, default: nil
   option :proxy_command, default: nil
-  
-  # Modern proxy jump options (recommended)
-  option :proxy_jump, default: nil
-  option :proxy_password, default: nil
   
   # SSH key authentication
   option :key_files, default: nil

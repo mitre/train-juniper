@@ -32,27 +32,19 @@ options = {
   logger: logger  # Add logger to connection options
 }
 
-# Re-enable jumpbox now that plugin architecture works
-if ENV['JUMPBOX_HOST'] && ENV['JUMPBOX_USER']
-  options[:proxy_jump] = "#{ENV['JUMPBOX_USER']}@#{ENV['JUMPBOX_HOST']}"
-  options[:proxy_password] = ENV['JUMPBOX_PASSWORD'] if ENV['JUMPBOX_PASSWORD']
-  puts "Using jumpbox: #{ENV['JUMPBOX_USER']}@#{ENV['JUMPBOX_HOST']}"
-  puts "Proxy jump string: #{options[:proxy_jump]}"
-  puts "Proxy authentication: #{options[:proxy_password] ? 'password configured' : 'no password'}"
-end
-
-# Re-enable jumpbox using the WORKING approach from old version
+# Configure bastion host if environment variables are set
 if ENV['JUNIPER_BASTION_HOST'] && ENV['JUNIPER_BASTION_USER']
-  options[:proxy_jump] = "#{ENV['JUNIPER_BASTION_USER']}@#{ENV['JUNIPER_BASTION_HOST']}"
-  options[:proxy_password] = ENV['JUNIPER_PASSWORD'] if ENV['JUNIPER_PASSWORD']  # Use same password
-  puts "Using jumpbox: #{ENV['JUNIPER_BASTION_USER']}@#{ENV['JUNIPER_BASTION_HOST']}"
-  puts "Proxy jump string: #{options[:proxy_jump]}"
-  puts "Proxy authentication: #{options[:proxy_password] ? 'password configured' : 'no password'}"
+  options[:bastion_host] = ENV['JUNIPER_BASTION_HOST']
+  options[:bastion_user] = ENV['JUNIPER_BASTION_USER']
+  options[:bastion_port] = ENV['JUNIPER_BASTION_PORT']&.to_i || 22
+  options[:bastion_password] = ENV['JUNIPER_BASTION_PASSWORD'] || ENV['JUNIPER_PASSWORD']  # Use dedicated bastion password or fallback
+  puts "Using bastion host: #{options[:bastion_user]}@#{options[:bastion_host]}:#{options[:bastion_port]}"
+  puts "Bastion authentication: #{options[:bastion_password] ? 'password configured' : 'no password'}"
 end
 
 puts "Testing train-juniper plugin connection..."
 puts "Connecting to #{options[:host]}:#{options[:port]} as #{options[:user]}"
-puts "Connection options: #{options.reject { |k,v| [:password, :proxy_password].include?(k) }.inspect}"
+puts "Connection options: #{options.reject { |k,v| [:password, :bastion_password].include?(k) }.inspect}"
 
 begin
   puts "\n=== Creating Train transport ==="
