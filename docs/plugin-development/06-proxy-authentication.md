@@ -67,6 +67,10 @@ class Transport < Train.plugin(1)
   option :bastion_port, default: 22
   option :proxy_command, default: nil
   
+  # Modern proxy jump options (recommended)
+  option :proxy_jump, default: nil
+  option :proxy_password, default: nil
+  
   # SSH key authentication
   option :key_files, default: nil
   option :keys_only, default: false
@@ -113,6 +117,11 @@ def initialize(options)
   @options[:bastion_user] ||= ENV['YOUR_BASTION_USER'] || 'root'
   @options[:bastion_port] ||= ENV['YOUR_BASTION_PORT']&.to_i || 22
   
+  # Map bastion_host to proxy_jump for compatibility
+  if @options[:bastion_host] && !@options[:proxy_jump]
+    @options[:proxy_jump] = "#{@options[:bastion_user]}@#{@options[:bastion_host]}"
+  end
+  
   # Validate proxy configuration
   validate_proxy_options
   
@@ -123,65 +132,75 @@ end
 def connect
   ssh_options = base_ssh_options
   
-  # Add proxy support if configured
-  proxy_config = setup_proxy_connection
-  ssh_options[:proxy] = proxy_config if proxy_config
+  # Add proxy support if configured using Net::SSH::Proxy::Jump
+  if @options[:proxy_jump]
+    require 'net/ssh/proxy/jump'
+    
+    # Set up automated password authentication via SSH_ASKPASS
+    if @options[:proxy_password]
+      @ssh_askpass_script = create_ssh_askpass_script(@options[:proxy_password])
+      ENV['SSH_ASKPASS'] = @ssh_askpass_script
+      ENV['SSH_ASKPASS_REQUIRE'] = 'force'
+      @logger.debug("Configured SSH_ASKPASS for automated proxy authentication")
+    end
+    
+    ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(@options[:proxy_jump])
+    @logger.debug("Using proxy jump: #{@options[:proxy_jump]}")
+  end
   
   @ssh_session = Net::SSH.start(@options[:host], @options[:user], ssh_options)
 end
 
 private
 
-def setup_proxy_connection
-  return nil unless @options[:bastion_host]
+def create_ssh_askpass_script(password)
+  require 'tempfile'
   
-  @logger.debug("Setting up bastion host: #{@options[:bastion_host]}")
+  script = Tempfile.new(['ssh_askpass', '.sh'])
+  script.write("#!/bin/bash\necho '#{password}'\n")
+  script.close
+  File.chmod(0755, script.path)
   
-  proxy_command = generate_bastion_proxy_command
-  
-  require 'net/ssh/proxy/command'
-  Net::SSH::Proxy::Command.new(proxy_command)
+  @logger.debug("Created SSH_ASKPASS script at #{script.path}")
+  script.path
 end
+```
 
-def generate_bastion_proxy_command
-  args = ['ssh']
-  
-  # SSH security options
-  args += ['-o', 'UserKnownHostsFile=/dev/null']
-  args += ['-o', 'StrictHostKeyChecking=no']
-  args += ['-o', 'LogLevel=ERROR']
-  args += ['-o', 'ForwardAgent=no']
-  args += ['-o', 'IdentitiesOnly=yes']
-  
-  # Add SSH keys if specified
-  if @options[:key_files]
-    Array(@options[:key_files]).each do |key_file|
-      args += ['-i', key_file]
-    end
-  end
-  
-  # Bastion connection details
-  args += ["#{@options[:bastion_user]}@#{@options[:bastion_host]}"]
-  args += ['-p', @options[:bastion_port].to_s]
-  args += ['-W', '%h:%p']  # SSH ProxyCommand format
-  
-  proxy_command = args.join(' ')
-  @logger.debug("Generated bastion proxy command: #{proxy_command}")
-  proxy_command
-end
+### Modern Proxy Jump vs Legacy ProxyCommand
+
+**Recommended: Use `proxy_jump` with automated password authentication**
+
+```ruby
+# Modern approach with SSH_ASKPASS automation
+options[:proxy_jump] = "user@bastion.host"
+options[:proxy_password] = "password"  # Automated via SSH_ASKPASS
+
+# This creates: Net::SSH::Proxy::Jump.new("user@bastion.host")
+# With SSH_ASKPASS script for non-interactive password input
+```
+
+**Legacy: ProxyCommand has password authentication limitations**
+
+```ruby
+# Legacy approach - cannot handle interactive passwords
+proxy_command = "ssh user@bastion.host -W %h:%p"
+Net::SSH::Proxy::Command.new(proxy_command)
+
+# ProxyCommand subprocesses cannot access terminal for password prompts
+# Only works with SSH keys or SSH agent authentication
 ```
 
 ### URI Examples
 
 ```bash
-# Basic bastion host
-yourname://admin@device.internal?bastion_host=jump.corp.com
+# Modern proxy jump with password
+yourname://admin@device.internal?proxy_jump=user@jump.corp.com&proxy_password=secret
 
-# Custom bastion user and port  
-yourname://admin@device?bastion_host=jump.corp&bastion_user=netops&bastion_port=2222
+# Legacy bastion host (mapped to proxy_jump internally)
+yourname://admin@device.internal?bastion_host=jump.corp.com&bastion_user=netops
 
-# With SSH keys
-yourname://admin@device?bastion_host=jump.corp&key_files=/path/to/key
+# With SSH keys (works with both approaches)
+yourname://admin@device?proxy_jump=user@jump.corp&key_files=/path/to/key
 ```
 
 ---
@@ -329,6 +348,10 @@ def initialize(options)
   @options[:bastion_user] ||= ENV['YOUR_BASTION_USER'] || 'root'
   @options[:bastion_port] ||= ENV['YOUR_BASTION_PORT']&.to_i || 22
   @options[:proxy_command] ||= ENV['YOUR_PROXY_COMMAND']
+  
+  # Modern proxy jump environment variables
+  @options[:proxy_jump] ||= ENV['YOUR_PROXY_JUMP']
+  @options[:proxy_password] ||= ENV['YOUR_PROXY_PASSWORD']
   
   # Authentication environment variables
   @options[:api_token] ||= ENV['YOUR_API_TOKEN']
