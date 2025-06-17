@@ -1,0 +1,52 @@
+# Base RuboCop configuration for Train plugins
+# Copy this file to your Train plugin project as a starting point
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  TargetRubyVersion: 3.1
+  Exclude:
+    - 'vendor/**/*'
+    - '.bundle/**/*'
+    - 'site/**/*'
+    - 'docs/**/*'
+
+# Train plugins use compact module definition pattern
+Style/ClassAndModuleChildren:
+  Enabled: false  # TrainPlugins::PluginName is the standard format
+
+# Plugin entry points follow train-* naming convention  
+Naming/FileName:
+  Exclude:
+    - 'lib/train-*.rb'  # Standard entry point: lib/train-pluginname.rb
+
+# Plugins have different documentation patterns than typical Ruby gems
+Style/Documentation:
+  Enabled: false
+
+# Consistent string usage
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+# Test files have different block length requirements
+Metrics/BlockLength:
+  AllowedMethods:
+    - describe
+    - context
+    - it
+    - shared_examples
+    - shared_context
+  Exclude:
+    - '**/*_test.rb'
+    - 'test/**/*'
+    - 'spec/**/*'
+    - '*.gemspec'
+
+# Allow test-specific patterns
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - 'test/**/*'  # MockResult, TestConnection classes
+
+Style/GlobalStdStream:
+  Exclude:
+    - 'test/**/*'  # Test output and debugging

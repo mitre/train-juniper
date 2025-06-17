@@ -1,0 +1,59 @@
+# TruffleHog configuration for train-juniper plugin
+# Customizes secrets detection for network device testing
+
+# File patterns to exclude from scanning
+exclude_paths:
+  - '.git/'
+  - 'coverage/'
+  - '*.gem'
+  - '*.lock'
+  - 'site/'
+  - 'docs/site/'
+
+# Allow certain test patterns that aren't real secrets
+allow:
+  # Test credential patterns that are safe
+  - 'test_credential'
+  - 'test_device_password'
+  - 'test_bastion_password'
+  - 'test_shared_password'
+  - 'your_password_here'
+  - 'your_username'
+  - 'device.example.com'
+  - 'admin@example.com'
+  
+  # Mock/placeholder values
+  - 'REDACTED'
+  - 'PLACEHOLDER'
+  - 'EXAMPLE'
+  - 'MOCK'
+  
+  # Environment variable references (these are safe)
+  - 'ENV['
+  - '${'
+
+# Custom detector rules for network device credentials
+detectors:
+  # Enhanced password detection for network devices
+  - name: 'network_passwords'
+    keywords:
+      - 'password'
+      - 'passwd'
+      - 'secret'
+      - 'key'
+    regex: 
+      # Look for actual passwords but exclude test patterns
+      password: '(?i)(password|passwd|secret|key)\s*[=:]\s*["\'](?!test_|your_|example|mock|redacted)[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};:,.<>?]{8,}["\']'
+      
+  # SSH key detection
+  - name: 'ssh_keys'
+    keywords:
+      - 'ssh-rsa'
+      - 'ssh-ed25519'
+      - 'BEGIN PRIVATE KEY'
+    regex:
+      ssh_key: '(ssh-rsa|ssh-ed25519|-----BEGIN [A-Z ]+PRIVATE KEY-----)'
+
+# Verification settings
+verify: false  # Skip online verification for faster scanning
+concurrency: 4  # Number of concurrent workers

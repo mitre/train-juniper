@@ -2,9 +2,24 @@
 
 # Quick test script to verify our train-juniper plugin works with real Juniper devices
 
+# Find the project root directory (contains train-juniper.gemspec)
+def find_project_root
+  current_dir = __dir__
+  while current_dir != '/'
+    return current_dir if File.exist?(File.join(current_dir, 'train-juniper.gemspec'))
+
+    current_dir = File.dirname(current_dir)
+  end
+  raise 'Could not find project root (train-juniper.gemspec not found)'
+end
+
+# Add lib directory to load path and require our plugin
+project_root = find_project_root
+$LOAD_PATH.unshift(File.join(project_root, 'lib'))
+
 require 'bundler/setup'
 require 'logger'
-require_relative 'lib/train-juniper'
+require 'train-juniper'
 
 # Enable verbose logging
 logger = Logger.new(STDOUT)

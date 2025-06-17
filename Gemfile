@@ -25,8 +25,9 @@ group :development do
   gem "simplecov" # Code coverage analysis
   
   # Security testing gems
-  gem "bundler-audit"
+  gem "bundler-audit", require: false
   gem "brakeman", require: false
+  # gem "overcommit", require: false  # TODO: Fix Ruby 3.1.6 compatibility issue
 end
 
 group :security do

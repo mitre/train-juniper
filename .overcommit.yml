@@ -1,0 +1,110 @@
+# Overcommit configuration for train-juniper plugin
+# Security and code quality automation
+#
+# NOTE: Currently has compatibility issues with RVM + Ruby 3.1.6
+# Alternative: Use 'rake security' tasks manually or in CI/CD
+#
+# Installation (when compatible):
+#   gem install overcommit
+#   overcommit --install
+#   overcommit --sign
+
+# Use project Gemfile for consistent tool versions
+gemfile: true
+
+# Enable signature verification for security
+verify_signatures: true
+
+# Quiet output for cleaner CI logs
+quiet: false
+
+# Pre-commit hooks - run before code is committed
+PreCommit:
+  # Security Analysis
+  BundleAudit:
+    enabled: true
+    description: 'Check for vulnerable gem dependencies'
+    
+  # Secrets Detection (Critical - prevents credential leaks)
+  TruffleHog:
+    enabled: true
+    description: 'Scan for secrets and credentials'
+    required_executable: 'trufflehog'
+    command: ['trufflehog', 'filesystem', '--no-verification', '--no-update', '.']
+    install_command: 'brew install trufflehog'
+    
+  # Code Quality
+  RuboCop:
+    enabled: true
+    description: 'Analyze code style and quality'
+    flags: ['--format=emacs', '--force-exclusion', '--display-cop-names']
+    
+  # Syntax and Basic Checks
+  RubySyntax:
+    enabled: true
+    description: 'Check Ruby syntax'
+    
+  MergeConflicts:
+    enabled: true
+    description: 'Check for merge conflict markers'
+    
+  TrailingWhitespace:
+    enabled: true
+    description: 'Check for trailing whitespace'
+    
+  # File Security
+  ExecutePermissions:
+    enabled: true
+    description: 'Check for files with execute permissions'
+    
+  # JSON/YAML Validation
+  JsonSyntax:
+    enabled: true
+    description: 'Validate JSON files'
+    
+  YamlSyntax:
+    enabled: true
+    description: 'Validate YAML files'
+
+# Pre-push hooks - run before pushing to remote
+PrePush:
+  # Security Vulnerability Scanning
+  Brakeman:
+    enabled: true
+    description: 'Scan for security vulnerabilities'
+    flags: ['--exit-on-warn', '--quiet', '--summary', '--no-progress']
+    
+  # Test Suite
+  Minitest:
+    enabled: true
+    description: 'Run test suite before push'
+    command: ['bundle', 'exec', 'rake', 'test']
+    
+  # Bundler checks
+  BundleCheck:
+    enabled: true
+    description: 'Verify Gemfile dependencies are satisfied'
+
+# Commit message hooks
+CommitMsg:
+  CapitalizedSubject:
+    enabled: true
+    description: 'Ensure subject line is capitalized'
+    
+  EmptyMessage:
+    enabled: true
+    description: 'Prevent empty commit messages'
+    
+  SingleLineSubject:
+    enabled: true
+    description: 'Ensure subject is single line'
+    
+  TextWidth:
+    enabled: true
+    description: 'Check commit message line length'
+    max_subject_width: 72
+    max_body_width: 72
+    
+  TrailingPeriod:
+    enabled: true
+    description: 'Prevent trailing periods in subject'

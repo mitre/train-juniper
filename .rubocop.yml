@@ -1,0 +1,96 @@
+# RuboCop configuration for Train-Juniper plugin
+# Network transport plugins have different patterns than typical Ruby apps
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  TargetRubyVersion: 3.1
+  Exclude:
+    - 'site/**/*'
+    - 'archive/**/*'
+    - 'docs/**/*'
+    - 'vendor/**/*'
+    - '.bundle/**/*'
+
+# Exclude complex connection logic from auto-correction that breaks code
+Style/SafeNavigation:
+  Exclude:
+    - 'lib/train-juniper/connection.rb'  # Complex SSH connection logic
+
+# Network plugins need longer classes for connection handling
+Metrics/ClassLength:
+  Max: 300  # Connection classes handle SSH, auth, commands, etc.
+
+# Network initialization involves many configuration options
+Metrics/MethodLength:
+  Max: 60  # SSH setup, proxy config, session initialization
+
+Metrics/AbcSize:
+  Max: 60  # Complex network setup methods
+
+Metrics/CyclomaticComplexity:
+  Max: 25  # Network auth and proxy logic (initialize: 20, connect: 18)
+
+Metrics/PerceivedComplexity:
+  Max: 25  # Error handling for network scenarios
+
+Metrics/ModuleLength:
+  Max: 120  # Platform detection modules need more space
+
+# Test files have naturally long describe blocks
+Metrics/BlockLength:
+  Max: 50  # Allow longer blocks for gemspec and test files
+  AllowedMethods:
+    - describe
+    - context
+    - it
+  Exclude:
+    - '**/*_test.rb'
+    - 'test/**/*'
+    - 'spec/**/*'
+    - '*.gemspec'
+
+# Line length - allow longer lines for network config
+Layout/LineLength:
+  Max: 140  # Network paths and error messages can be long
+
+# Allow constants in test blocks (MockResult class)
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - 'test/**/*'
+
+# File naming - train-juniper.rb is the standard entry point name
+Naming/FileName:
+  Exclude:
+    - 'lib/train-juniper.rb'
+
+# String literals - relax for network plugins
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+# Guard clause - can be problematic with complex error handling
+Style/GuardClause:
+  Enabled: false  # Network plugins have complex nested error handling
+
+# Identical conditional branches - can break heredoc error messages
+Style/IdenticalConditionalBranches:
+  Enabled: false  # Network plugins return similar results for different paths
+
+# Allow compact module definition for plugins  
+Style/ClassAndModuleChildren:
+  Enabled: false  # Train plugins use compact TrainPlugins::PluginName format
+
+# Allow STDOUT for logger output in network plugins
+Style/GlobalStdStream:
+  Exclude:
+    - 'lib/train-juniper/connection.rb'  # Logger defaults to STDOUT
+    - 'test/**/*'  # Test files may use STDOUT
+
+# Platform detection has expected duplicate architecture mappings
+Lint/DuplicateBranch:
+  Exclude:
+    - 'lib/train-juniper/platform.rb'  # Platform arch detection has expected duplicates
+  
+# Documentation requirements
+Style/Documentation:
+  Enabled: false  # Network plugins have different doc patterns

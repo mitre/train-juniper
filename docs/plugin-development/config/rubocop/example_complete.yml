@@ -1,0 +1,94 @@
+# Complete RuboCop configuration example for network device Train plugins
+# This demonstrates how to combine the modular configurations
+
+# Option 1: Inherit from modular configs (recommended)
+inherit_from:
+  - config/rubocop/train_plugin_base.yml
+  - config/rubocop/network_device.yml  
+  - config/rubocop/testing.yml
+
+# Plugin-specific overrides
+AllCops:
+  TargetRubyVersion: 3.1
+  Exclude:
+    - 'archive/**/*'      # Project-specific exclusions
+    - 'examples/**/*'
+    - 'vendor/**/*'
+
+# Plugin-specific rule adjustments
+Layout/LineLength:
+  Max: 120  # Stricter than network_device.yml default of 140
+
+# Plugin-specific exclusions
+Style/SafeNavigation:
+  Exclude:
+    - 'lib/train-myplugin/connection.rb'  # Your plugin's connection file
+
+Lint/DuplicateBranch:
+  Exclude:
+    - 'lib/train-myplugin/platform.rb'   # Your plugin's platform file
+
+# ---
+# Option 2: Inline complete configuration (for reference)
+# Uncomment below and remove inherit_from section to use inline config
+
+# AllCops:
+#   NewCops: enable
+#   SuggestExtensions: false
+#   TargetRubyVersion: 3.1
+#   Exclude:
+#     - 'vendor/**/*'
+#     - '.bundle/**/*'
+#     - 'site/**/*'
+#     - 'docs/**/*'
+# 
+# # Train plugin patterns
+# Style/ClassAndModuleChildren:
+#   Enabled: false
+# 
+# Naming/FileName:
+#   Exclude:
+#     - 'lib/train-*.rb'
+# 
+# Style/Documentation:
+#   Enabled: false
+# 
+# # Network device complexity
+# Metrics/ClassLength:
+#   Max: 300
+# 
+# Metrics/MethodLength:
+#   Max: 60
+# 
+# Metrics/AbcSize:
+#   Max: 60
+# 
+# Metrics/CyclomaticComplexity:
+#   Max: 25
+# 
+# Metrics/PerceivedComplexity:
+#   Max: 25
+# 
+# Layout/LineLength:
+#   Max: 140
+# 
+# # Network device patterns
+# Style/GuardClause:
+#   Enabled: false
+# 
+# Style/IdenticalConditionalBranches:
+#   Enabled: false
+# 
+# # Testing patterns
+# Metrics/BlockLength:
+#   AllowedMethods:
+#     - describe
+#     - context
+#     - it
+#   Exclude:
+#     - 'test/**/*'
+#     - '*.gemspec'
+# 
+# Lint/ConstantDefinitionInBlock:
+#   Exclude:
+#     - 'test/**/*'

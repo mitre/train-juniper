@@ -49,15 +49,38 @@ task "test:security" do
   ruby "-Ilib:test test/security/security_test.rb"
 end
 
-desc "Run security audit"
-task "security:audit" do
-  system("gem install bundler-audit") unless system("bundler-audit --version > /dev/null 2>&1")
-  system("bundler-audit check --update --verbose") or abort("Security audit failed")
-  system("ruby security/check_credentials.rb") or abort("Credential check failed")
+desc "Run dependency vulnerability scan"
+task "security:dependencies" do
+  puts "Running bundler-audit dependency scan..."
+  system("bundle exec bundle-audit update") or puts "Failed to update vulnerability database"
+  system("bundle exec bundle-audit check") or abort("Vulnerable dependencies found")
 end
 
-desc "Run comprehensive security checks"
-task security: %w[security:audit test:security]
+desc "Run secrets scanning"
+task "security:secrets" do
+  puts "Running TruffleHog secrets scan..."
+  if system("which trufflehog > /dev/null 2>&1")
+    system("trufflehog filesystem --config=.trufflehog.yml --no-verification --no-update .") or abort("Secrets detected")
+  else
+    puts "TruffleHog not installed. Install with: brew install trufflehog"
+    abort("TruffleHog required for secrets scanning")
+  end
+end
+
+desc "Run Brakeman security vulnerability scan"
+task "security:brakeman" do
+  puts "Running Brakeman security scan..."
+  system("bundle exec brakeman --exit-on-warn --quiet --force") or abort("Security vulnerabilities found")
+end
+
+desc "Run comprehensive security scan"
+task "security:scan" do
+  puts "Running comprehensive security scan..."
+  system("ruby security/security_scan.rb") or abort("Security scan failed")
+end
+
+desc "Run all security checks"
+task security: %w[security:dependencies security:brakeman test:security]
 
 desc "Run all tests including security"
 task "test:all" => %w[test security]
