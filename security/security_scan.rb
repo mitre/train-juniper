@@ -42,7 +42,7 @@ class SecurityScanner
   # Secrets detection using TruffleHog (industry standard)
   def scan_secrets_with_trufflehog
     puts '🕵️  Scanning for secrets with TruffleHog...'
-    
+
     if command_exists?('trufflehog')
       cmd = [
         'trufflehog', 'filesystem',
@@ -52,21 +52,21 @@ class SecurityScanner
         '--no-update',
         '.'
       ]
-      
-      stdout, stderr, status = Open3.capture3(*cmd)
-      
+
+      stdout, _, status = Open3.capture3(*cmd)
+
       if status.success? && stdout.strip.empty?
         puts '   ✅ No secrets detected'
       else
         secrets_found = stdout.split("\n").select { |line| line.start_with?('{') }
-        
+
         if secrets_found.any?
           @issues_found += secrets_found.length
           puts "   ⚠️  Found #{secrets_found.length} potential secret(s)"
-          
+
           # Save detailed report
           File.write("#{@reports_dir}/secrets_scan.json", stdout)
-          
+
           # Show summary
           secrets_found.each do |secret_json|
             secret = JSON.parse(secret_json)
@@ -88,24 +88,24 @@ class SecurityScanner
   # Security vulnerability scanning using Brakeman
   def scan_vulnerabilities_with_brakeman
     puts '🛡️  Scanning for security vulnerabilities with Brakeman...'
-    
+
     cmd = ['bundle', 'exec', 'brakeman', '--format', 'json', '--quiet', '--force']
     stdout, stderr, status = Open3.capture3(*cmd)
-    
+
     if status.success?
       begin
         report = JSON.parse(stdout)
         warnings = report['warnings'] || []
-        
+
         if warnings.empty?
           puts '   ✅ No security vulnerabilities detected'
         else
           @issues_found += warnings.length
           puts "   ⚠️  Found #{warnings.length} security warning(s)"
-          
+
           # Save detailed report
           File.write("#{@reports_dir}/brakeman_report.json", stdout)
-          
+
           # Show summary
           warnings.first(5).each do |warning|
             puts "      - #{warning['warning_type']}: #{warning['message']}"
@@ -128,13 +128,13 @@ class SecurityScanner
   # Dependency vulnerability scanning using bundler-audit
   def scan_dependencies_with_bundler_audit
     puts '📦 Scanning dependencies with bundler-audit...'
-    
+
     # Update vulnerability database
     system('bundle exec bundle-audit update', out: File::NULL, err: File::NULL)
-    
+
     cmd = ['bundle', 'exec', 'bundle-audit', 'check', '--format', 'json']
     stdout, stderr, status = Open3.capture3(*cmd)
-    
+
     if status.success?
       puts '   ✅ No vulnerable dependencies detected'
     else
@@ -142,26 +142,24 @@ class SecurityScanner
       begin
         report = JSON.parse(stdout) if stdout.start_with?('{')
         vulnerabilities = report&.dig('results') || []
-        
+
         if vulnerabilities.any?
           @issues_found += vulnerabilities.length
           puts "   ⚠️  Found #{vulnerabilities.length} vulnerable dependencies"
-          
+
           # Save detailed report
           File.write("#{@reports_dir}/bundler_audit_report.json", stdout)
-          
+
           vulnerabilities.first(3).each do |vuln|
             puts "      - #{vuln['gem']} #{vuln['version']}: #{vuln['title']}"
           end
-        else
+        elsif stderr.include?('vulnerabilities') || stdout.include?('vulnerabilities')
           # Parse text output if JSON not available
-          if stderr.include?('vulnerabilities') || stdout.include?('vulnerabilities')
-            @issues_found += 1
-            puts '   ⚠️  Vulnerable dependencies detected (see full output)'
-            File.write("#{@reports_dir}/bundler_audit_output.txt", "#{stdout}\n#{stderr}")
-          else
-            puts '   ✅ No vulnerable dependencies detected'
-          end
+          @issues_found += 1
+          puts '   ⚠️  Vulnerable dependencies detected (see full output)'
+          File.write("#{@reports_dir}/bundler_audit_output.txt", "#{stdout}\n#{stderr}")
+        else
+          puts '   ✅ No vulnerable dependencies detected'
         end
       rescue JSON::ParserError
         # Handle non-JSON output
@@ -182,21 +180,21 @@ class SecurityScanner
   # License compliance scanning
   def scan_licenses
     puts '⚖️  Scanning license compliance...'
-    
+
     cmd = ['bundle', 'exec', 'license_finder', '--format', 'json']
-    stdout, stderr, status = Open3.capture3(*cmd)
-    
+    stdout, _, status = Open3.capture3(*cmd)
+
     if status.success?
       begin
         licenses = JSON.parse(stdout)
         unapproved = licenses.select { |license| license['approved'] == false }
-        
+
         if unapproved.empty?
           puts '   ✅ All licenses approved'
         else
           puts "   ⚠️  Found #{unapproved.length} gems with unapproved licenses"
           File.write("#{@reports_dir}/license_report.json", stdout)
-          
+
           unapproved.first(3).each do |license|
             puts "      - #{license['name']}: #{license['licenses'].join(', ')}"
           end
@@ -228,7 +226,7 @@ class SecurityScanner
       ],
       reports_location: @reports_dir
     }
-    
+
     File.write("#{@reports_dir}/security_summary.json", JSON.pretty_generate(report))
     puts "📊 Security summary saved to: #{@reports_dir}/security_summary.json"
   end

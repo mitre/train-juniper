@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-06-17
+
+### Added
+- Enhanced Material Design documentation with MkDocs
+- Comprehensive JSON/XML structured output examples
+- Professional admonitions, icons, and tabbed content
+- Call-to-action buttons and improved navigation
+- Environment variable cleanup for better test isolation
+- Comprehensive security testing framework
+- Enhanced error handling and edge case coverage
+
+### Changed  
+- Updated documentation to focus on plugin usage (tutorial moved to separate repository)
+- Improved proxy/bastion authentication patterns with comprehensive examples
+- Enhanced installation instructions with multiple methods
+- Standardized all Markdown files to use .md extension
+
+### Fixed
+- Test isolation issues preventing consistent test results
+- Environment variable pollution between test files
+- Repository structure cleanup for production readiness
+
+## [0.3.0] - 2025-06-16
+
+### Added
+- Production-ready SSH connectivity with net-ssh-telnet integration
+- Comprehensive proxy and bastion host support with multiple authentication patterns
+- Platform detection with performance caching
+- Mock mode for testing without hardware
+- Security infrastructure and audit capabilities
+
+## [0.2.0] - 2025-06-16
+
+### Added
+- Enhanced proxy authentication standardization
+- Bundle development workflow documentation
+- Dependency conflict resolution
+
 ## [0.1.0] - 2025-01-16
 
 ### Added

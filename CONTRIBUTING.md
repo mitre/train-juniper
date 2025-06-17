@@ -2,51 +2,79 @@
 
 Thank you for your interest in contributing to the Train-Juniper plugin! We welcome contributions from the community.
 
-## Development Workflow
+!!! info "Quick Start for Contributors"
+    New to the project? Start with our [development workflow](#development-workflow) below.
+
+## Development Workflow :material-git:
 
 We use a standard GitFlow workflow:
 
-1. **Fork** the repository on GitHub
-2. **Clone** your fork locally
-3. **Create a feature branch** from `main`:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-4. **Make your changes** with appropriate tests
-5. **Run the test suite** to ensure everything passes:
-   ```bash
-   bundle install
-   bundle exec rake test
-   ```
+=== "Quick Setup"
+    ```bash
+    # Fork and clone
+    git clone https://github.com/YOUR_USERNAME/train-juniper.git
+    cd train-juniper
+    bundle install
+    
+    # Run tests
+    bundle exec rake test
+    ```
+
+=== "Step by Step"
+    1. **Fork** :material-source-fork: the repository on GitHub
+    2. **Clone** your fork locally
+    3. **Create a feature branch** from `main`:
+       ```bash
+       git checkout -b feature/your-feature-name
+       ```
+    4. **Make your changes** with appropriate tests
+    5. **Run the test suite** to ensure everything passes:
+       ```bash
+       bundle install
+       bundle exec rake test
+       ```
 6. **Commit your changes** with clear, descriptive messages
 7. **Push** to your fork and **create a Pull Request**
 
-## Code Requirements
+## Code Requirements :material-check-all:
 
-### Testing
-- All new functionality must include tests
-- Tests must pass: `bundle exec rake test`
-- Maintain or improve code coverage (currently 82%+)
+!!! warning "Quality Standards"
+    All contributions must meet our quality standards before merging.
 
-### Code Style
-- Follow existing Ruby style conventions
-- Run linting: `bundle exec rubocop`
-- No RuboCop violations
+### Testing :material-test-tube:
+- **All new functionality must include tests**
+- **Tests must pass**: `bundle exec rake test`
+- **Maintain or improve code coverage** (currently 74%+)
 
-### Documentation
-- Update README.md for user-facing changes
-- Add inline documentation for new methods
-- Update relevant documentation modules in `docs/plugin-development/`
+### Code Style :material-code-tags:
+- **Follow existing Ruby style conventions**
+- **Run linting**: `bundle exec rubocop`
+- **No RuboCop violations**
+
+### Documentation :material-book-open:
+- **Update README.md** for user-facing changes
+- **Add inline documentation** for new methods
+- **Update relevant documentation** in the [Train Plugin Development Guide](https://github.com/mitre/train-plugin-development-guide)
 
 ## Types of Contributions
 
-### Bug Reports
+### Bug Reports :material-bug:
+
+!!! bug "Reporting Issues"
+    Help us fix problems by providing detailed bug reports.
+
+**Requirements:**
 - Use GitHub Issues with the "bug" label
 - Include steps to reproduce
 - Provide InSpec and Ruby version information
 - Include relevant log output with `-l debug`
 
-### Feature Requests
+### Feature Requests :material-lightbulb:
+
+!!! tip "Suggesting Features"
+    We love new ideas! Please discuss before implementing.
+
+**Process:**
 - Open a GitHub Issue with the "enhancement" label
 - Describe the use case and expected behavior
 - Discuss implementation approach before coding

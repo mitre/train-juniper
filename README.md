@@ -1,17 +1,26 @@
 # Train Juniper Plugin
 
-This Train plugin provides connectivity to Juniper Networks devices running JunOS for InSpec compliance testing and infrastructure inspection. It enables InSpec to connect to Juniper routers, switches, and security appliances via SSH.
+A production-ready Train plugin that provides SSH connectivity to Juniper Networks devices running JunOS for InSpec compliance testing and infrastructure inspection.
+
+!!! info "Quick Start"
+    Install the plugin: `inspec plugin install train-juniper` and start testing your Juniper infrastructure immediately.
+
+## Features :material-star:
 
 The plugin supports:
-- SSH authentication to Juniper devices  
-- JunOS platform detection and version parsing
-- Command execution with Juniper CLI prompt handling
-- Configuration file inspection via pseudo-file operations
-- Mock mode for testing without real hardware
 
-## Installation
+- :material-ssh: **SSH Authentication** - Secure connections with password or key-based auth
+- :material-router-network: **JunOS Platform Detection** - Automatic version parsing and platform registration  
+- :material-console: **Command Execution** - CLI command execution with Juniper-specific prompt handling
+- :material-network: **Proxy/Bastion Support** - Enterprise network connectivity through jump hosts
+- :material-file-document: **Configuration Inspection** - Pseudo-file operations for configuration access
+- :material-test-tube: **Mock Mode** - Complete testing support without requiring real hardware
+- :material-speedometer: **Performance Optimized** - Efficient platform detection with result caching
 
-You will need InSpec v4.0 or later.
+## Installation :material-download:
+
+!!! warning "Prerequisites"
+    You will need InSpec v4.0 or later.
 
 ### Production Installation (from RubyGems)
 
@@ -335,12 +344,14 @@ This plugin implements the Train Plugin V1 API with:
 
 ### Documentation
 
-- **[Train Plugin Development Guide](docs/plugin-development/)** - Comprehensive modular guide covering all aspects of Train plugin development
+- **[Installation Guide](installation.md)** - Complete installation instructions
+- **[Basic Usage](basic-usage.md)** - Getting started with the plugin
 - **[Project Roadmap](ROADMAP.md)** - Future development plans and contribution opportunities
-- **[Research Summary](docs/research.md)** - Community plugin analysis and findings
-- **[Implementation Plan](docs/implementation.md)** - Original development roadmap
-- **[Development Environment](docs/development-environment.md)** - Containerlab setup guide
-- **[Legacy Howto](docs/train-plugin-howto.md)** - Original comprehensive guide (superseded by modular guide)
+
+### Plugin Development Resources
+
+- **[Train Plugin Development Guide](https://github.com/mitre/train-plugin-development-guide)** - Comprehensive tutorial for Train plugin development
+- **How This Plugin Was Built** - See modules 20-22 in the development guide for our research methodology, implementation approach, and containerlab testing environment
 
 ## Contributing
 
@@ -376,12 +387,12 @@ Special thanks to the Train and InSpec communities for their excellent documenta
 
 Licensed under the Apache-2.0 license, except as noted below.
 
-See [LICENSE](LICENSE) for full details.
+See [LICENSE](LICENSE.md) for full details.
 
 ### Notice
 
 This software was produced for the U.S. Government under contract and is subject to Federal Acquisition Regulation Clause 52.227-14.
 
-See [NOTICE.md](NOTICE.md) for full details.
+See [NOTICE](NOTICE.md) for full details.
 
 © 2025 The MITRE Corporation.

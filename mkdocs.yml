@@ -1,0 +1,90 @@
+site_name: Train-Juniper Plugin
+site_description: InSpec compliance testing for Juniper Networks devices running JunOS
+site_author: MITRE Corporation
+site_url: https://mitre.github.io/train-juniper/
+
+repo_name: mitre/train-juniper
+repo_url: https://github.com/mitre/train-juniper
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.action.edit
+    - content.code.copy
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.caret
+  - pymdownx.tilde
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Basic Usage: basic-usage.md
+  - Contributing:
+    - Contributing Guide: CONTRIBUTING.md
+    - Code of Conduct: CODE_OF_CONDUCT.md
+    - Security Policy: SECURITY.md
+  - About:
+    - License: LICENSE.md
+    - Notice: NOTICE.md
+    - Changelog: CHANGELOG.md
+    - Roadmap: ROADMAP.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/mitre/train-juniper
+  version:
+    provider: mike
