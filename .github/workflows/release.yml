@@ -1,0 +1,113 @@
+name: Release to RubyGems
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.4.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  RUBY_VERSION: '3.1.6'
+
+jobs:
+  pre-release-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ env.RUBY_VERSION }}
+        bundler-cache: true
+        
+    - name: Run full test suite
+      run: |
+        bundle exec rake test
+        
+    - name: Run security audit
+      run: |
+        gem install bundler-audit
+        bundler-audit check --update
+        
+    - name: Run linting
+      run: |
+        bundle exec rubocop
+        
+    - name: Validate gem build
+      run: |
+        gem build train-juniper.gemspec
+        gem spec train-juniper-*.gem
+        
+  release:
+    needs: pre-release-checks
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.1
+        bundler-cache: true
+        
+    - name: Configure RubyGems credentials
+      run: |
+        mkdir -p ~/.gem
+        cat > ~/.gem/credentials << EOF
+        ---
+        :rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}
+        EOF
+        chmod 0600 ~/.gem/credentials
+        
+    - name: Generate changelog
+      uses: orhun/git-cliff-action@v4
+      id: git-cliff
+      with:
+        config: cliff.toml
+        args: --verbose --latest --strip header
+      env:
+        OUTPUT: CHANGES.md
+        
+    - name: Build and publish gem
+      run: |
+        gem build train-juniper.gemspec
+        gem push train-juniper-*.gem
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        files: |
+          train-juniper-*.gem
+        body: |
+          ${{ steps.git-cliff.outputs.content }}
+          
+          ## Installation
+          
+          ```bash
+          inspec plugin install train-juniper
+          ```
+          
+          ## Documentation
+          
+          - [Plugin Documentation](https://mitre.github.io/train-juniper/)
+          - [Train Plugin Development Guide](https://github.com/mitre/train-plugin-development-guide)
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

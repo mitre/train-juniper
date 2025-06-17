@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This file is known as the "entry point."
 # This is the file Train will try to load if it
 # thinks your plugin is needed.
@@ -12,10 +14,10 @@ libdir = __dir__
 $LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
 
 # It's traditional to keep your gem version in a separate file, so CI can find it easier.
-require "train-juniper/version"
+require 'train-juniper/version'
 
 # A train plugin has three components: Transport, Connection, and Platform.
 # Transport acts as the glue.
-require "train-juniper/transport"
-require "train-juniper/platform"
-require "train-juniper/connection"
+require 'train-juniper/transport'
+require 'train-juniper/platform'
+require 'train-juniper/connection'

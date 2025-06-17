@@ -1,127 +1,127 @@
+# frozen_string_literal: true
+
 # Test platform detection functionality
 
-require_relative "../helper"
+require_relative '../helper'
 
 describe TrainPlugins::Juniper::Platform do
   let(:connection) do
     # Create a test double that responds to run_command
     Class.new do
       include TrainPlugins::Juniper::Platform
-      
+
       def initialize(mock_output = nil)
         @mock_output = mock_output
         @options = { mock: false }
         @logger = Logger.new(StringIO.new)
       end
-      
-      def run_command_via_connection(cmd)
+
+      def run_command_via_connection(_cmd)
         if @mock_output
           MockResult.new(@mock_output, 0)
         else
-          MockResult.new("", 1, "Command failed")
+          MockResult.new('', 1, 'Command failed')
         end
       end
-      
+
       def connected?
         !@mock_output.nil?
       end
-      
-      def logger
-        @logger
-      end
+
+      attr_reader :logger
     end
   end
-  
+
   # Mock result class for testing
   class MockResult
     attr_reader :stdout, :exit_status, :stderr
-    
-    def initialize(stdout, exit_status = 0, stderr = "")
+
+    def initialize(stdout, exit_status = 0, stderr = '')
       @stdout = stdout
       @exit_status = exit_status
       @stderr = stderr
     end
   end
-  
-  describe "version detection" do
-    it "should detect standard JunOS version format" do
+
+  describe 'version detection' do
+    it 'should detect standard JunOS version format' do
       version_output = <<~OUTPUT
         Hostname: lab-srx
         Model: SRX240H2
         Junos: 12.1X47-D15.4
         JUNOS Software Release [12.1X47-D15.4]
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
       version = test_connection.send(:detect_junos_version)
-      _(version).must_equal("12.1X47-D15.4")
+      _(version).must_equal('12.1X47-D15.4')
     end
-    
-    it "should cache version detection results" do
+
+    it 'should cache version detection results' do
       version_output = <<~OUTPUT
         Hostname: lab-srx
         Model: SRX240H2
         Junos: 12.1X47-D15.4
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
-      
+
       # Mock run_command_via_connection to track call count
       call_count = 0
-      test_connection.define_singleton_method(:run_command_via_connection) do |cmd|
+      test_connection.define_singleton_method(:run_command_via_connection) do |_cmd|
         call_count += 1
         MockResult.new(version_output, 0)
       end
-      
+
       # First call should execute command
       version1 = test_connection.send(:detect_junos_version)
-      _(version1).must_equal("12.1X47-D15.4")
+      _(version1).must_equal('12.1X47-D15.4')
       _(call_count).must_equal(1)
-      
+
       # Second call should use cached result
       version2 = test_connection.send(:detect_junos_version)
-      _(version2).must_equal("12.1X47-D15.4")
+      _(version2).must_equal('12.1X47-D15.4')
       _(call_count).must_equal(1) # Should not increase
     end
-    
-    it "should detect JUNOS Software Release format" do
+
+    it 'should detect JUNOS Software Release format' do
       version_output = <<~OUTPUT
         JUNOS Software Release [21.4R3.15]
         Model: srx300
         Package: [21.4R3.15]
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
       version = test_connection.send(:detect_junos_version)
-      _(version).must_equal("21.4R3.15")
+      _(version).must_equal('21.4R3.15')
     end
-    
-    it "should detect simple Junos version format" do
+
+    it 'should detect simple Junos version format' do
       version_output = <<~OUTPUT
         Hostname: firewall01
         Model: SRX1500
         Junos: 23.4R1.9
         Base OS boot [23.4R1.9]
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
       version = test_connection.send(:detect_junos_version)
-      _(version).must_equal("23.4R1.9")
+      _(version).must_equal('23.4R1.9')
     end
-    
-    it "should handle version detection failure gracefully" do
-      test_connection = connection.new("No version information")
+
+    it 'should handle version detection failure gracefully' do
+      test_connection = connection.new('No version information')
       version = test_connection.send(:detect_junos_version)
       _(version).must_be_nil
     end
-    
-    it "should handle command execution failure" do
+
+    it 'should handle command execution failure' do
       test_connection = connection.new(nil) # Will return failed command
       version = test_connection.send(:detect_junos_version)
       _(version).must_be_nil
     end
-    
-    it "should extract version from complex output" do
+
+    it 'should extract version from complex output' do
       complex_output = <<~OUTPUT
         Hostname: core-router
         Model: MX960
@@ -135,232 +135,232 @@ describe TrainPlugins::Juniper::Platform do
         JUNOS Online Documentation [20.4R3.8]
         JUNOS Routing Software Suite [20.4R3.8]
       OUTPUT
-      
+
       test_connection = connection.new(complex_output)
       version = test_connection.send(:detect_junos_version)
-      _(version).must_equal("20.4R3.8")
+      _(version).must_equal('20.4R3.8')
     end
   end
-  
-  describe "version extraction patterns" do
-    let(:mock_connection) { connection.new("") }
-    
-    it "should extract version from JUNOS Software Release pattern" do
-      output = "JUNOS Software Release [19.1R1.6]"
+
+  describe 'version extraction patterns' do
+    let(:mock_connection) { connection.new('') }
+
+    it 'should extract version from JUNOS Software Release pattern' do
+      output = 'JUNOS Software Release [19.1R1.6]'
       version = mock_connection.send(:extract_version_from_output, output)
-      _(version).must_equal("19.1R1.6")
+      _(version).must_equal('19.1R1.6')
     end
-    
-    it "should extract version from Junos: pattern" do
-      output = "Junos: 18.4R2.7"
+
+    it 'should extract version from Junos: pattern' do
+      output = 'Junos: 18.4R2.7'
       version = mock_connection.send(:extract_version_from_output, output)
-      _(version).must_equal("18.4R2.7")
+      _(version).must_equal('18.4R2.7')
     end
-    
-    it "should extract version from general version pattern" do
-      output = "Some text with version 22.3R1.1 embedded"
+
+    it 'should extract version from general version pattern' do
+      output = 'Some text with version 22.3R1.1 embedded'
       version = mock_connection.send(:extract_version_from_output, output)
-      _(version).must_equal("22.3R1.1")
+      _(version).must_equal('22.3R1.1')
     end
-    
-    it "should return nil when no version pattern matches" do
-      output = "No version information here"
+
+    it 'should return nil when no version pattern matches' do
+      output = 'No version information here'
       version = mock_connection.send(:extract_version_from_output, output)
       _(version).must_be_nil
     end
-    
-    it "should handle empty output" do
-      version = mock_connection.send(:extract_version_from_output, "")
+
+    it 'should handle empty output' do
+      version = mock_connection.send(:extract_version_from_output, '')
       _(version).must_be_nil
     end
   end
-  
-  describe "architecture detection" do
-    it "should detect SRX model as x86_64" do
+
+  describe 'architecture detection' do
+    it 'should detect SRX model as x86_64' do
       version_output = <<~OUTPUT
         Hostname: lab-srx
         Model: SRX240H2
         Junos: 12.1X47-D15.4
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
       arch = test_connection.send(:detect_junos_architecture)
-      _(arch).must_equal("x86_64")
+      _(arch).must_equal('x86_64')
     end
-    
-    it "should detect MX model as x86_64" do
+
+    it 'should detect MX model as x86_64' do
       version_output = <<~OUTPUT
         Hostname: core-router
         Model: MX960
         Junos: 20.4R3.8
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
       arch = test_connection.send(:detect_junos_architecture)
-      _(arch).must_equal("x86_64")
+      _(arch).must_equal('x86_64')
     end
-    
-    it "should detect EX model as arm64" do
+
+    it 'should detect EX model as arm64' do
       version_output = <<~OUTPUT
         Hostname: switch01
         Model: EX4300-48T
         Junos: 18.4R2.7
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
       arch = test_connection.send(:detect_junos_architecture)
-      _(arch).must_equal("arm64")
+      _(arch).must_equal('arm64')
     end
-    
-    it "should handle architecture detection failure gracefully" do
-      test_connection = connection.new("No architecture information")
+
+    it 'should handle architecture detection failure gracefully' do
+      test_connection = connection.new('No architecture information')
       arch = test_connection.send(:detect_junos_architecture)
       _(arch).must_be_nil
     end
-    
-    it "should handle command execution failure for architecture" do
+
+    it 'should handle command execution failure for architecture' do
       test_connection = connection.new(nil) # Will return failed command
       arch = test_connection.send(:detect_junos_architecture)
       _(arch).must_be_nil
     end
-    
-    it "should cache architecture detection results" do
+
+    it 'should cache architecture detection results' do
       version_output = <<~OUTPUT
         Hostname: lab-srx
         Model: SRX240H2
         Junos: 12.1X47-D15.4
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
-      
+
       # Mock run_command_via_connection to track call count
       call_count = 0
-      test_connection.define_singleton_method(:run_command_via_connection) do |cmd|
+      test_connection.define_singleton_method(:run_command_via_connection) do |_cmd|
         call_count += 1
         MockResult.new(version_output, 0)
       end
-      
+
       # First call should execute command
       arch1 = test_connection.send(:detect_junos_architecture)
-      _(arch1).must_equal("x86_64")
+      _(arch1).must_equal('x86_64')
       _(call_count).must_equal(1)
-      
+
       # Second call should use cached result
       arch2 = test_connection.send(:detect_junos_architecture)
-      _(arch2).must_equal("x86_64")
+      _(arch2).must_equal('x86_64')
       _(call_count).must_equal(1) # Should not increase
     end
-    
-    it "should share cached result between version and architecture detection" do
+
+    it 'should share cached result between version and architecture detection' do
       version_output = <<~OUTPUT
         Hostname: lab-srx
         Model: SRX240H2
         Junos: 12.1X47-D15.4
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
-      
+
       # Mock run_command_via_connection to track call count
       call_count = 0
-      test_connection.define_singleton_method(:run_command_via_connection) do |cmd|
+      test_connection.define_singleton_method(:run_command_via_connection) do |_cmd|
         call_count += 1
         MockResult.new(version_output, 0)
       end
-      
+
       # First call for version detection
       version = test_connection.send(:detect_junos_version)
-      _(version).must_equal("12.1X47-D15.4")
+      _(version).must_equal('12.1X47-D15.4')
       _(call_count).must_equal(1)
-      
+
       # Architecture detection should reuse the cached result
       arch = test_connection.send(:detect_junos_architecture)
-      _(arch).must_equal("x86_64")
+      _(arch).must_equal('x86_64')
       _(call_count).must_equal(1) # Should not increase - shared cache
-      
+
       # Subsequent calls should also use cache
       version2 = test_connection.send(:detect_junos_version)
       arch2 = test_connection.send(:detect_junos_architecture)
-      _(version2).must_equal("12.1X47-D15.4")
-      _(arch2).must_equal("x86_64") 
+      _(version2).must_equal('12.1X47-D15.4')
+      _(arch2).must_equal('x86_64')
       _(call_count).must_equal(1) # Still should not increase
     end
   end
-  
-  describe "architecture extraction patterns" do
-    let(:mock_connection) { connection.new("") }
-    
-    it "should extract architecture from SRX model" do
-      output = "Model: SRX1500"
+
+  describe 'architecture extraction patterns' do
+    let(:mock_connection) { connection.new('') }
+
+    it 'should extract architecture from SRX model' do
+      output = 'Model: SRX1500'
       arch = mock_connection.send(:extract_architecture_from_output, output)
-      _(arch).must_equal("x86_64")
+      _(arch).must_equal('x86_64')
     end
-    
-    it "should extract architecture from QFX model" do
-      output = "Model: QFX5100-48S"
+
+    it 'should extract architecture from QFX model' do
+      output = 'Model: QFX5100-48S'
       arch = mock_connection.send(:extract_architecture_from_output, output)
-      _(arch).must_equal("x86_64")
+      _(arch).must_equal('x86_64')
     end
-    
-    it "should return nil when no architecture pattern matches" do
-      output = "No model information here"
+
+    it 'should return nil when no architecture pattern matches' do
+      output = 'No model information here'
       arch = mock_connection.send(:extract_architecture_from_output, output)
       _(arch).must_be_nil
     end
-    
-    it "should handle empty output for architecture" do
-      arch = mock_connection.send(:extract_architecture_from_output, "")
+
+    it 'should handle empty output for architecture' do
+      arch = mock_connection.send(:extract_architecture_from_output, '')
       _(arch).must_be_nil
     end
   end
-  
-  describe "platform method caching" do
-    it "should cache platform detection results across multiple calls" do
+
+  describe 'platform method caching' do
+    it 'should cache platform detection results across multiple calls' do
       version_output = <<~OUTPUT
         Hostname: lab-srx
         Model: SRX240H2
         Junos: 12.1X47-D15.4
       OUTPUT
-      
+
       test_connection = connection.new(version_output)
-      
+
       # Mock run_command_via_connection to track call count
       call_count = 0
-      test_connection.define_singleton_method(:run_command_via_connection) do |cmd|
+      test_connection.define_singleton_method(:run_command_via_connection) do |_cmd|
         call_count += 1
         MockResult.new(version_output, 0)
       end
-      
+
       # Mock the platform registration and force_platform! methods
       test_connection.define_singleton_method(:platform) do
         # Call both detection methods (simulating platform method behavior)
         detect_junos_version
         detect_junos_architecture
-        
+
         # Return mock platform object
         {
-          name: "juniper",
-          release: "12.1X47-D15.4",
-          arch: "x86_64",
-          families: ["bsd", "unix", "os"]
+          name: 'juniper',
+          release: '12.1X47-D15.4',
+          arch: 'x86_64',
+          families: %w[bsd unix os]
         }
       end
-      
+
       # First platform call should execute command once
       platform1 = test_connection.platform
-      _(platform1[:release]).must_equal("12.1X47-D15.4")
-      _(platform1[:arch]).must_equal("x86_64")
+      _(platform1[:release]).must_equal('12.1X47-D15.4')
+      _(platform1[:arch]).must_equal('x86_64')
       _(call_count).must_equal(1) # Single command execution for both version and arch
-      
-      # Second platform call should use cached results 
+
+      # Second platform call should use cached results
       platform2 = test_connection.platform
-      _(platform2[:release]).must_equal("12.1X47-D15.4")
-      _(platform2[:arch]).must_equal("x86_64")
+      _(platform2[:release]).must_equal('12.1X47-D15.4')
+      _(platform2[:arch]).must_equal('x86_64')
       _(call_count).must_equal(1) # Should not increase - cached
-      
+
       # Third platform call should also use cache
       platform3 = test_connection.platform
-      _(platform3[:release]).must_equal("12.1X47-D15.4")
-      _(platform3[:arch]).must_equal("x86_64")
+      _(platform3[:release]).must_equal('12.1X47-D15.4')
+      _(platform3[:arch]).must_equal('x86_64')
       _(call_count).must_equal(1) # Still should not increase
     end
   end

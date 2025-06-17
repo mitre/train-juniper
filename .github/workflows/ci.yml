@@ -1,0 +1,113 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUBY_VERSION: '3.1.6'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ['3.1', '3.2', '3.3']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby ${{ matrix.ruby-version }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+        bundler-cache: true
+        
+    - name: Run tests
+      run: |
+        bundle exec rake test
+        
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      if: matrix.ruby-version == env.RUBY_VERSION
+      with:
+        file: ./coverage/.resultset.json
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ env.RUBY_VERSION }}
+        bundler-cache: true
+        
+    - name: Run RuboCop
+      run: |
+        bundle exec rubocop --format github --fail-level convention
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ env.RUBY_VERSION }}
+        bundler-cache: true
+        
+    - name: Install TruffleHog
+      run: |
+        # Install TruffleHog for secrets scanning (skip overcommit setup)
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          curl -sSfL https://github.com/trufflesecurity/trufflehog/releases/latest/download/trufflehog_linux_amd64.tar.gz | tar -xz
+          sudo mv trufflehog /usr/local/bin/
+        fi
+        
+    - name: Run comprehensive security scan
+      run: |
+        # Use existing security scanner (includes bundler-audit, brakeman, etc.)
+        ruby security/security_scan.rb
+
+  quality:
+    runs-on: ubuntu-latest
+    needs: [test, lint, security]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ env.RUBY_VERSION }}
+        bundler-cache: true
+        
+    - name: Check test coverage
+      run: |
+        bundle exec rake test
+        echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+        coverage=$(grep -o '[0-9]*\.[0-9]*%' coverage/index.html | head -1)
+        echo "Current coverage: $coverage" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Validate gem build
+      run: |
+        gem build train-juniper.gemspec
+        echo "✅ Gem builds successfully" >> $GITHUB_STEP_SUMMARY
