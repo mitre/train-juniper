@@ -16,7 +16,8 @@ Rake::TestTask.new do |t|
   t.test_files = FileList[
     'test/unit/*_test.rb',
     'test/integration/*_test.rb',
-    'test/functional/*_test.rb'
+    'test/functional/*_test.rb',
+    'test/security/*_test.rb'
   ]
   t.verbose = true
   # Ideally, we'd run tests with warnings enabled,

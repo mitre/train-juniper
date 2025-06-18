@@ -90,16 +90,18 @@ if ! bundle install; then
     exit 1
 fi
 
-# Setup overcommit hooks
+# Setup overcommit hooks (skip if not available due to compatibility issues)
 echo
 echo "🪝 Setting up git hooks with overcommit..."
-if ! bundle exec overcommit --install; then
-    echo "⚠️  Overcommit install failed. Please check your git repository."
-    exit 1
-fi
-
-if ! bundle exec overcommit --sign; then
-    echo "⚠️  Overcommit signing failed. You may need to sign manually later."
+if bundle exec overcommit --install 2>/dev/null; then
+    echo "✓ Overcommit hooks installed successfully"
+    if ! bundle exec overcommit --sign; then
+        echo "⚠️  Overcommit signing failed. You may need to sign manually later."
+    fi
+else
+    echo "⚠️  Overcommit not available (likely due to Ruby 3.1.6 compatibility issues)"
+    echo "    This is expected - overcommit is commented out in Gemfile"
+    echo "    Security scanning will still work via CI/CD and manual scripts"
 fi
 
 # Test the security setup

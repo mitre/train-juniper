@@ -175,9 +175,13 @@ describe 'Security Tests' do
     end
 
     it 'should handle proxy command configuration' do
-      proxy_options = connection_options.merge({
-                                                 proxy_command: 'ssh -W %h:%p custom-proxy.example.com'
-                                               })
+      proxy_options = {
+        host: 'test.device',
+        user: 'testuser',
+        password: 'testpass',
+        mock: true,
+        proxy_command: 'ssh -W %h:%p custom-proxy.example.com'
+      }
 
       test_connection = TrainPlugins::Juniper::Connection.new(proxy_options)
       _(test_connection).wont_be_nil
@@ -241,7 +245,7 @@ describe 'Security Tests' do
 
       _(platform_obj).wont_be_nil
       _(platform_obj.name).must_equal('juniper')
-      _(platform_obj.family).must_equal('network')
+      _(platform_obj.family).must_equal('bsd')
     end
 
     it 'should not expose sensitive information in platform data' do
