@@ -49,6 +49,13 @@ test/infrastructure/vrnetlab/**/*.iso
 test/infrastructure/vrnetlab/**/docker-image
 test/infrastructure/vrnetlab/**/build.log
 
+# Large VM images and test artifacts
+test/images/**/*.qcow2
+test/images/**/*.vmdk
+test/images/**/*.iso
+test/images/**/*.ova
+test/images/**/*.crdownload
+
 # Container lab artifacts
 clab-*/
 .clab/
