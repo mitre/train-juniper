@@ -61,3 +61,5 @@ jobs:
           
       - name: Build and publish gem
         uses: rubygems/release-gem@v1
+        with:
+          api-key: ${{ secrets.RUBYGEMS_API_KEY }}
