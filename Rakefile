@@ -94,10 +94,7 @@ task 'test:all' => %w[test security]
 Dir['tasks/*.rake'].each { |f| load f }
 
 #------------------------------------------------------------------#
-#                    Release Task for GitHub Actions
+#                    Bundler Gem Tasks
 #------------------------------------------------------------------#
-desc 'Build and push gem to RubyGems'
-task :release do
-  # Just build the gem - the rubygems/release-gem action will handle the push
-  sh 'gem build train-juniper.gemspec'
-end
+# This provides the standard 'rake release' task that rubygems/release-gem expects
+require 'bundler/gem_tasks'
