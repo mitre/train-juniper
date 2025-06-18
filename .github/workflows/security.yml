@@ -42,7 +42,7 @@ jobs:
         
     - name: Run custom security checks
       run: |
-        ruby security/check_credentials.rb
+        ruby security/security_scan.rb
         
     - name: Run Brakeman security scan
       run: |

@@ -75,11 +75,10 @@ jobs:
         
     - name: Install TruffleHog
       run: |
-        # Install TruffleHog for secrets scanning (skip overcommit setup)
-        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-          curl -sSfL https://github.com/trufflesecurity/trufflehog/releases/latest/download/trufflehog_linux_amd64.tar.gz | tar -xz
-          sudo mv trufflehog /usr/local/bin/
-        fi
+        # Install TruffleHog for secrets scanning using more reliable method
+        TRUFFLEHOG_VERSION="3.84.2"
+        curl -sSfL "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz" | tar -xz
+        sudo mv trufflehog /usr/local/bin/
         
     - name: Run comprehensive security scan
       run: |
