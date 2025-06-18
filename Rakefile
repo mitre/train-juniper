@@ -92,3 +92,12 @@ task 'test:all' => %w[test security]
 #                    Load Additional Tasks
 #------------------------------------------------------------------#
 Dir['tasks/*.rake'].each { |f| load f }
+
+#------------------------------------------------------------------#
+#                    Release Task for GitHub Actions
+#------------------------------------------------------------------#
+desc 'Build and push gem to RubyGems'
+task :release do
+  # Just build the gem - the rubygems/release-gem action will handle the push
+  sh 'gem build train-juniper.gemspec'
+end
