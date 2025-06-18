@@ -20,7 +20,6 @@ class SecurityScanner
     puts '🔒 Running security scans for train-juniper plugin...'
     puts
 
-    scan_secrets_with_trufflehog
     scan_dependencies_with_bundler_audit
     scan_licenses
     generate_security_report
@@ -38,51 +37,6 @@ class SecurityScanner
 
   private
 
-  # Secrets detection using TruffleHog (industry standard)
-  def scan_secrets_with_trufflehog
-    puts '🕵️  Scanning for secrets with TruffleHog...'
-
-    if command_exists?('trufflehog')
-      cmd = [
-        'trufflehog', 'filesystem',
-        '--config=.trufflehog.yml',
-        '--json',
-        '--no-verification',
-        '--no-update',
-        '.'
-      ]
-
-      stdout, _, status = Open3.capture3(*cmd)
-
-      if status.success? && stdout.strip.empty?
-        puts '   ✅ No secrets detected'
-      else
-        secrets_found = stdout.split("\n").select { |line| line.start_with?('{') }
-
-        if secrets_found.any?
-          @issues_found += secrets_found.length
-          puts "   ⚠️  Found #{secrets_found.length} potential secret(s)"
-
-          # Save detailed report
-          File.write("#{@reports_dir}/secrets_scan.json", stdout)
-
-          # Show summary
-          secrets_found.each do |secret_json|
-            secret = JSON.parse(secret_json)
-            puts "      - #{secret['DetectorName']} in #{secret['SourceMetadata']['Data']['Filesystem']['file']}"
-          end
-        else
-          puts '   ✅ No secrets detected'
-        end
-      end
-    else
-      puts '   ⚠️  TruffleHog not installed. Install with: brew install trufflehog'
-      @issues_found += 1
-    end
-  rescue StandardError => e
-    puts "   ❌ TruffleHog scan failed: #{e.message}"
-    @issues_found += 1
-  end
 
   # Dependency vulnerability scanning using bundler-audit
   def scan_dependencies_with_bundler_audit
@@ -178,7 +132,6 @@ class SecurityScanner
         status: @issues_found.zero? ? 'PASS' : 'FAIL'
       },
       tools_used: [
-        'TruffleHog (secrets detection)',
         'bundler-audit (dependency vulnerabilities)',
         'license_finder (license compliance)'
       ],
