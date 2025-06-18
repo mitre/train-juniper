@@ -1,0 +1,63 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  RUBY_VERSION: '3.1.6'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          
+      - name: Run tests
+        run: bundle exec rake test
+        
+      - name: Run security audit
+        run: |
+          gem install bundler-audit
+          bundler-audit check --update
+          
+      - name: Run linting
+        run: bundle exec rubocop
+        
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: Read release notes
+        id: notes
+        run: |
+          if [ -f "docs/release-notes/v${{ steps.version.outputs.VERSION }}.md" ]; then
+            echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+            cat "docs/release-notes/v${{ steps.version.outputs.VERSION }}.md" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "NOTES=No release notes found for v${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          fi
+        
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: ${{ steps.notes.outputs.NOTES }}
+          draft: false
+          prerelease: false
+          
+      - name: Build and publish gem
+        uses: rubygems/release-gem@v1

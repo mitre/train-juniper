@@ -87,3 +87,8 @@ task security: %w[security:dependencies security:brakeman test:security]
 
 desc 'Run all tests including security'
 task 'test:all' => %w[test security]
+
+#------------------------------------------------------------------#
+#                    Load Additional Tasks
+#------------------------------------------------------------------#
+Dir['tasks/*.rake'].each { |f| load f }

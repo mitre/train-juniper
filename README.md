@@ -346,6 +346,7 @@ This plugin implements the Train Plugin V1 API with:
 
 - **[Installation Guide](installation.md)** - Complete installation instructions
 - **[Basic Usage](basic-usage.md)** - Getting started with the plugin
+- **[Release Process](RELEASE_PROCESS.md)** - How to cut releases and publish gems
 - **[Project Roadmap](ROADMAP.md)** - Future development plans and contribution opportunities
 
 ### Plugin Development Resources
