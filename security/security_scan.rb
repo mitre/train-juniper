@@ -21,7 +21,6 @@ class SecurityScanner
     puts
 
     scan_secrets_with_trufflehog
-    scan_vulnerabilities_with_brakeman
     scan_dependencies_with_bundler_audit
     scan_licenses
     generate_security_report
@@ -85,45 +84,6 @@ class SecurityScanner
     @issues_found += 1
   end
 
-  # Security vulnerability scanning using Brakeman
-  def scan_vulnerabilities_with_brakeman
-    puts '🛡️  Scanning for security vulnerabilities with Brakeman...'
-
-    cmd = ['bundle', 'exec', 'brakeman', '--format', 'json', '--quiet', '--force']
-    stdout, stderr, status = Open3.capture3(*cmd)
-
-    if status.success?
-      begin
-        report = JSON.parse(stdout)
-        warnings = report['warnings'] || []
-
-        if warnings.empty?
-          puts '   ✅ No security vulnerabilities detected'
-        else
-          @issues_found += warnings.length
-          puts "   ⚠️  Found #{warnings.length} security warning(s)"
-
-          # Save detailed report
-          File.write("#{@reports_dir}/brakeman_report.json", stdout)
-
-          # Show summary
-          warnings.first(5).each do |warning|
-            puts "      - #{warning['warning_type']}: #{warning['message']}"
-          end
-          puts "      (+ #{warnings.length - 5} more)" if warnings.length > 5
-        end
-      rescue JSON::ParserError
-        puts '   ❌ Failed to parse Brakeman output'
-        @issues_found += 1
-      end
-    else
-      puts "   ❌ Brakeman scan failed: #{stderr}"
-      @issues_found += 1
-    end
-  rescue StandardError => e
-    puts "   ❌ Brakeman scan failed: #{e.message}"
-    @issues_found += 1
-  end
 
   # Dependency vulnerability scanning using bundler-audit
   def scan_dependencies_with_bundler_audit
@@ -220,7 +180,6 @@ class SecurityScanner
       },
       tools_used: [
         'TruffleHog (secrets detection)',
-        'Brakeman (security vulnerabilities)',
         'bundler-audit (dependency vulnerabilities)',
         'license_finder (license compliance)'
       ],

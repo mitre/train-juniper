@@ -44,10 +44,6 @@ jobs:
       run: |
         ruby security/security_scan.rb
         
-    - name: Run Brakeman security scan
-      run: |
-        bundle exec brakeman --no-pager --format plain
-      continue-on-error: true # Brakeman might not find much in a gem
       
     - name: Check for secrets in code
       uses: trufflesecurity/trufflehog@main

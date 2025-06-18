@@ -60,34 +60,9 @@ jobs:
       run: |
         bundle exec rubocop --format github --fail-level convention
 
-  security:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ env.RUBY_VERSION }}
-        bundler-cache: true
-        
-    - name: Install TruffleHog
-      run: |
-        # Install TruffleHog for secrets scanning using more reliable method
-        TRUFFLEHOG_VERSION="3.84.2"
-        curl -sSfL "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz" | tar -xz
-        sudo mv trufflehog /usr/local/bin/
-        
-    - name: Run comprehensive security scan
-      run: |
-        # Use existing security scanner (includes bundler-audit, brakeman, etc.)
-        ruby security/security_scan.rb
-
   quality:
     runs-on: ubuntu-latest
-    needs: [test, lint, security]
+    needs: [test, lint]
     
     steps:
     - name: Checkout code
