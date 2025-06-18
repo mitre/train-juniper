@@ -70,7 +70,7 @@ namespace :release do # rubocop:disable Metrics/BlockLength
     puts "\nNext steps:"
     puts '  1. Review the changes: git show'
     puts '  2. Push commits: git push origin main'
-    puts "  3. Run release: bundle exec rake release"
+    puts '  3. Run release: bundle exec rake release'
     puts "\nThis will:"
     puts "  - Create tag v#{new_version}"
     puts '  - Push the tag to GitHub'
