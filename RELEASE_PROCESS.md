@@ -56,6 +56,7 @@ bundle exec rake release:major
 
 The rake task will automatically:
 - ✅ Update `lib/train-juniper/version.rb` with the new version
+- ✅ Update `Gemfile.lock` with the new version
 - ✅ Generate/update `CHANGELOG.md` using git-cliff (groups commits by type)
 - ✅ Create release notes in `docs/release-notes/v{version}.md`
 - ✅ Commit all changes with message "Bump version to {version}"

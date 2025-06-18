@@ -52,6 +52,10 @@ namespace :release do # rubocop:disable Metrics/BlockLength
     File.write(version_file, content)
     puts "✓ Updated #{version_file}"
 
+    # Update Gemfile.lock to reflect new version
+    system('bundle install --quiet') or abort('Failed to update Gemfile.lock')
+    puts '✓ Updated Gemfile.lock'
+
     # Update CHANGELOG.md
     update_changelog(new_version)
 
@@ -59,7 +63,7 @@ namespace :release do # rubocop:disable Metrics/BlockLength
     create_release_notes(new_version)
 
     # Commit changes
-    system("git add lib/train-juniper/version.rb CHANGELOG.md docs/release-notes/v#{new_version}.md")
+    system("git add lib/train-juniper/version.rb Gemfile.lock CHANGELOG.md docs/release-notes/v#{new_version}.md")
     system("git commit -m 'Bump version to #{new_version}'") or abort('Failed to commit changes')
 
     # Create and push tag
