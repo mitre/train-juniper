@@ -84,7 +84,6 @@ class SecurityScanner
     @issues_found += 1
   end
 
-
   # Dependency vulnerability scanning using bundler-audit
   def scan_dependencies_with_bundler_audit
     puts '📦 Scanning dependencies with bundler-audit...'
