@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-06-18
+
+### Added
+- Comprehensive CI/CD improvements with GitHub Actions workflows
+- Automated changelog generation with git-cliff
+- Complete repository separation from tutorial content
+- Enhanced security infrastructure with TruffleHog, Brakeman, and bundler-audit integration
+
+### Changed
+- Updated all GitHub Actions to latest versions with proper permissions
+- Improved Ruby version consistency across all workflows
+- Restructured documentation to focus on plugin usage
+- Enhanced security test coverage and reliability
+
+### Fixed
+- All RuboCop violations resolved (1,412 → 0 offenses)
+- Security tests now properly validate platform family as 'bsd'
+- Default test suite now includes security tests
+- Improved error handling in security setup scripts
+
+### Removed
+- Tutorial content moved to separate train-plugin-development-guide repository
+- Redundant security checking scripts replaced by industry-standard tools
+
 ## [0.4.0] - 2025-06-17
 
 ### Added

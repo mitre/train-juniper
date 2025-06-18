@@ -73,14 +73,31 @@ jobs:
         EOF
         chmod 0600 ~/.gem/credentials
         
-    - name: Generate changelog
+    - name: Generate and commit changelog
       uses: orhun/git-cliff-action@v4
       id: git-cliff
       with:
         config: cliff.toml
+        args: --verbose --tag ${{ github.ref_name }}
+      env:
+        OUTPUT: CHANGELOG.md
+        
+    - name: Commit changelog
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add CHANGELOG.md
+        git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md for ${{ github.ref_name }}"
+        git push
+        
+    - name: Generate release notes
+      uses: orhun/git-cliff-action@v4
+      id: release-notes
+      with:
+        config: cliff.toml
         args: --verbose --latest --strip header
       env:
-        OUTPUT: CHANGES.md
+        OUTPUT: RELEASE_NOTES.md
         
     - name: Build and publish gem
       run: |
@@ -97,7 +114,7 @@ jobs:
         files: |
           train-juniper-*.gem
         body: |
-          ${{ steps.git-cliff.outputs.content }}
+          ${{ steps.release-notes.outputs.content }}
           
           ## Installation
           
