@@ -2,7 +2,7 @@
 
 require 'time'
 
-namespace :release do
+namespace :release do # rubocop:disable Metrics/BlockLength
   desc 'Cut a new patch release (e.g., 0.5.0 -> 0.5.1)'
   task :patch do
     release('patch')
@@ -20,15 +20,11 @@ namespace :release do
 
   def release(type)
     # Ensure working directory is clean
-    unless `git status --porcelain`.empty?
-      abort 'Error: Working directory is not clean. Commit or stash your changes first.'
-    end
+    abort 'Error: Working directory is not clean. Commit or stash your changes first.' unless `git status --porcelain`.empty?
 
     # Ensure we're on main branch
     current_branch = `git rev-parse --abbrev-ref HEAD`.strip
-    unless current_branch == 'main'
-      abort "Error: Must be on main branch to release (currently on #{current_branch})"
-    end
+    abort "Error: Must be on main branch to release (currently on #{current_branch})" unless current_branch == 'main'
 
     # Pull latest changes
     system('git pull origin main') or abort('Failed to pull latest changes')
@@ -69,65 +65,66 @@ namespace :release do
     # Create and push tag
     tag = "v#{new_version}"
     system("git tag -a #{tag} -m 'Release #{tag}'") or abort('Failed to create tag')
-    
+
     puts "\n🎉 Release #{new_version} prepared!"
     puts "\nNext steps:"
-    puts "  1. Review the changes: git show"
-    puts "  2. Push commits: git push origin main"
+    puts '  1. Review the changes: git show'
+    puts '  2. Push commits: git push origin main'
     puts "  3. Push tag: git push origin #{tag}"
     puts "\nThe CI/CD pipeline will automatically:"
-    puts "  - Create a GitHub release with the release notes"
-    puts "  - Publish the gem to RubyGems"
+    puts '  - Create a GitHub release with the release notes'
+    puts '  - Publish the gem to RubyGems'
   end
 
   def update_changelog(version)
     changelog_file = 'CHANGELOG.md'
-    
+
     # Generate full changelog using git-cliff if available
     if system('which git-cliff > /dev/null 2>&1')
       # Generate the full changelog with the new version
       system("git-cliff --tag v#{version} -o #{changelog_file}")
-      puts "✓ Generated CHANGELOG.md with git-cliff"
+      puts '✓ Generated CHANGELOG.md with git-cliff'
     else
       # Manual fallback if git-cliff not available
-      puts "⚠️  git-cliff not found. Creating basic changelog entry..."
-      
+      puts '⚠️  git-cliff not found. Creating basic changelog entry...'
+
       # Read current changelog or create new one
-      if File.exist?(changelog_file)
-        changelog = File.read(changelog_file)
-      else
-        changelog = "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
-      end
-      
+      changelog = if File.exist?(changelog_file)
+                    File.read(changelog_file)
+                  else
+                    "# Changelog\n\nAll notable changes to this project will be documented in this file.\n"
+                  end
+
       # Insert new version section
       date = Time.now.strftime('%Y-%m-%d')
       new_section = "\n## [#{version}] - #{date}\n\n"
-      new_section += "- See [commit history](https://github.com/mitre/train-juniper/compare/v#{current_version}...v#{version}) for changes\n"
-      
+      history_url = "https://github.com/mitre/train-juniper/compare/v#{current_version}...v#{version}"
+      new_section += "- See [commit history](#{history_url}) for changes\n"
+
       # Insert after the header
       lines = changelog.lines
       header_lines = lines.take_while { |line| !line.start_with?('##') }
       rest_lines = lines.drop(header_lines.length)
-      
+
       File.write(changelog_file, header_lines.join + new_section + rest_lines.join)
-      puts "✓ Updated CHANGELOG.md (manual)"
+      puts '✓ Updated CHANGELOG.md (manual)'
     end
   end
 
   def create_release_notes(version)
     notes_dir = 'docs/release-notes'
     FileUtils.mkdir_p(notes_dir)
-    
+
     notes_file = "#{notes_dir}/v#{version}.md"
-    
+
     # Get list of changes since last tag
     last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
-    if last_tag.empty?
-      changes = `git log --oneline`.lines.take(10)
-    else
-      changes = `git log #{last_tag}..HEAD --oneline`.lines
-    end
-    
+    changes = if last_tag.empty?
+                `git log --oneline`.lines.take(10)
+              else
+                `git log #{last_tag}..HEAD --oneline`.lines
+              end
+
     # Format release notes
     content = <<~NOTES
       # Release Notes for v#{version}
@@ -154,7 +151,7 @@ namespace :release do
 
       See the [CHANGELOG](../../CHANGELOG.md) for complete details.
     NOTES
-    
+
     File.write(notes_file, content)
     puts "✓ Created release notes at #{notes_file}"
   end
