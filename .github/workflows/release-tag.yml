@@ -59,5 +59,11 @@ jobs:
           draft: false
           prerelease: false
           
-      - name: Build and publish gem
-        uses: rubygems/release-gem@v1
+      - name: Setup RubyGems credentials
+        uses: rubygems/configure-rubygems-credentials@v1
+        
+      - name: Build gem
+        run: gem build train-juniper.gemspec
+        
+      - name: Publish to RubyGems  
+        run: gem push train-juniper-*.gem
