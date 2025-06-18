@@ -66,18 +66,15 @@ namespace :release do # rubocop:disable Metrics/BlockLength
     system("git add lib/train-juniper/version.rb Gemfile.lock CHANGELOG.md docs/release-notes/v#{new_version}.md")
     system("git commit -m 'Bump version to #{new_version}'") or abort('Failed to commit changes')
 
-    # Create and push tag
-    tag = "v#{new_version}"
-    system("git tag -a #{tag} -m 'Release #{tag}'") or abort('Failed to create tag')
-
     puts "\n🎉 Release #{new_version} prepared!"
     puts "\nNext steps:"
     puts '  1. Review the changes: git show'
     puts '  2. Push commits: git push origin main'
-    puts "  3. Push tag: git push origin #{tag}"
-    puts "\nThe CI/CD pipeline will automatically:"
-    puts '  - Create a GitHub release with the release notes'
-    puts '  - Publish the gem to RubyGems'
+    puts "  3. Run release: bundle exec rake release"
+    puts "\nThis will:"
+    puts "  - Create tag v#{new_version}"
+    puts '  - Push the tag to GitHub'
+    puts '  - Trigger GitHub Actions to publish the gem'
   end
 
   def update_changelog(version)

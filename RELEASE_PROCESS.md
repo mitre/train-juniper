@@ -39,9 +39,9 @@ Decide on the version bump based on [Semantic Versioning](https://semver.org/):
 - **Minor** (0.5.0 → 0.6.0): New features, backward compatible
 - **Major** (0.5.0 → 1.0.0): Breaking changes
 
-### 2. Run the Release Task
+### 2. Prepare the Release
 
-Execute the appropriate rake task:
+Execute the appropriate rake task to prepare the release:
 
 ```bash
 # For patch release (bug fixes)
@@ -54,17 +54,17 @@ bundle exec rake release:minor
 bundle exec rake release:major
 ```
 
-The rake task will automatically:
+This rake task will automatically:
 - ✅ Update `lib/train-juniper/version.rb` with the new version
 - ✅ Update `Gemfile.lock` with the new version
 - ✅ Generate/update `CHANGELOG.md` using git-cliff (groups commits by type)
 - ✅ Create release notes in `docs/release-notes/v{version}.md`
 - ✅ Commit all changes with message "Bump version to {version}"
-- ✅ Create an annotated tag `v{version}`
+- ❌ Does NOT create a tag (Bundler will do this)
 
 ### 3. Review Changes
 
-Before pushing, review what was changed:
+Before releasing, review what was changed:
 
 ```bash
 # Review the commit
@@ -77,17 +77,27 @@ cat CHANGELOG.md
 cat docs/release-notes/v{version}.md
 ```
 
-### 4. Push to GitHub
+### 4. Push Changes
 
-If everything looks good, push the commits and tag:
+Push your commits to GitHub:
 
 ```bash
-# Push the commits
 git push origin main
-
-# Push the tag (replace with actual version)
-git push origin v0.5.1
 ```
+
+### 5. Create Tag and Publish
+
+Use Bundler's standard release process:
+
+```bash
+bundle exec rake release
+```
+
+This will:
+- ✅ Create tag `v{version}`
+- ✅ Push the tag to GitHub
+- ✅ Build the gem
+- ✅ Push to RubyGems (using trusted publishing)
 
 ### 5. Automated Publication
 
