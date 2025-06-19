@@ -64,9 +64,9 @@ $ inspec detect -t juniper://admin@192.168.1.1 --password yourpassword
 
 == Platform Details
 Name:      juniper
-Families:  network
+Families:  bsd
 Release:   21.4R3-S1.6
-Arch:      network
+Arch:      x86_64
 
 # Interactive shell
 $ inspec shell -t juniper://admin@192.168.1.1 --password yourpassword

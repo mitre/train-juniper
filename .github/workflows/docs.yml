@@ -1,5 +1,15 @@
 name: Documentation
 
+# This workflow automatically builds and deploys documentation
+# - On every push to main (including docs-only changes)
+# - On pull requests (build only, no deploy)
+# - Manual trigger via workflow_dispatch
+#
+# To update docs without releasing gem:
+# 1. Make documentation changes
+# 2. Commit with message like "docs: update installation guide"
+# 3. Push to main - docs will auto-deploy to GitHub Pages
+
 on:
   push:
     branches: [ main ]

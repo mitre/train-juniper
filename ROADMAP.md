@@ -2,86 +2,67 @@
 
 Future development plans and improvement roadmap for the train-juniper plugin.
 
-!!! success "Current Status: v0.4.0 - Production Ready"
-    All core phases complete! Production plugin with enhanced documentation, comprehensive testing, security infrastructure, and Material Design presentation.
+## Current Status: v0.6.2 - Production Ready
 
-## Recently Completed (v0.4.0) :material-check-all:
+Production-ready plugin with comprehensive testing, security infrastructure, and automated release process.
 
-- ✅ **Enhanced Material Design documentation** with MkDocs
-- ✅ **Repository separation** (plugin vs tutorial)
-- ✅ **Comprehensive test isolation** and reliability
-- ✅ **Professional documentation** with JSON/XML examples
-- ✅ **Security testing framework**
-- ✅ **Clean repository structure** for publication
+## Recently Completed (v0.6.x)
 
-## Future Enhancements (v0.5.x+)
+- ✅ **Windows compatibility** - Fixed FFI dependency for Windows users
+- ✅ **Mock mode improvements** - Accurate platform detection in mock mode
+- ✅ **Trusted publishing** - OIDC authentication for gem releases
+- ✅ **Automated release process** - git-cliff changelog generation
+- ✅ **Ruby 3.3 support** - Updated workflows for latest Ruby
+- ✅ **Comprehensive documentation** - Installation, usage, and troubleshooting guides
 
-### Advanced JunOS Features :material-router-network:
+## Possible Future Enhancements
 
-#### NETCONF Integration
-!!! note "Protocol Enhancement"
-    Add NETCONF support for advanced configuration management.
+### JunOS-Specific Features
 
-- **NETCONF protocol support** using `net-netconf` gem
-- **Configuration management** via NETCONF
-- **Structured data retrieval** for complex compliance scenarios
-- **RPC call support** for advanced JunOS operations
+#### NETCONF Transport Option
+- Alternative connection method using NETCONF protocol (port 830)
+- Leverage `net-netconf` gem for protocol handling
+- Would allow: `inspec detect -t juniper-netconf://device:830`
+- Returns structured XML responses instead of CLI text
+- Better for automation-heavy use cases
 
-#### Enhanced File Operations :material-file-multiple:
-- **Configuration backup and restore** capabilities
-- **Software package management**
-- **Log file retrieval and parsing**
-- **Certificate and key management**
+#### Enhanced Command Support
+- Support for configuration mode commands (enter configure mode, make changes)
+- Commit/rollback operations support (if needed for InSpec resources)
+- Better handling of command errors and warnings
 
-### Performance and Reliability
+### Connection Improvements
 
-#### Connection Pooling
-- Persistent SSH connections for multiple commands
-- Connection reuse for improved performance
-- Graceful connection recovery and retry logic
+#### Connection Reliability
+- Automatic reconnection on connection drops
+- Connection pooling for InSpec profiles with many resources (reuse SSH connection across multiple resources)
 
-#### Advanced Caching
-- Command result caching for repeated operations
-- Platform information caching across sessions
-- Configurable cache TTL settings
+### Developer Experience
 
-### Security Enhancements
+#### Enhanced Mock Mode
+- Expand mock responses for more JunOS commands (currently supports show version, show interfaces, show configuration, etc.)
+- Support for custom mock data files (user-provided responses)
+- Mock mode for different JunOS versions/platforms (MX, EX, QFX series)
 
-#### Advanced Authentication
-- Certificate-based authentication
-- RADIUS/TACACS+ integration support
-- Multi-factor authentication patterns
+#### Debugging Tools
+- Enhanced debug logging options
+- Connection troubleshooting commands
+- Performance profiling for slow commands
 
-#### Audit and Compliance
-- Command audit logging
-- Session recording capabilities
-- Compliance report generation
+### InSpec Resource Support
 
-### Integration Features
-
-#### CI/CD Integration
-- GitHub Actions examples for automated testing
-- Jenkins pipeline templates
-- Integration with infrastructure-as-code tools
-
-#### Monitoring Integration
-- Prometheus metrics export
-- Grafana dashboard templates
-- SIEM integration patterns
-
-## Long-term Goals (v1.0+)
-
-### Enterprise Features
-- High availability connection patterns
-- Load balancing across multiple devices
-- Cluster-aware operations
-- Enterprise directory integration
+#### Example Resources
+- Create example InSpec resources for common JunOS checks
+- Resource pack for Juniper compliance
+- Documentation for writing custom Juniper resources
 
 ### Community Contributions
-- Plugin extension framework
-- Custom command plugins
-- Community-contributed profiles
-- Device-specific optimizations
+
+We welcome contributions! Priority areas include:
+- Additional platform detection patterns for newer JunOS versions
+- Mock data for different Juniper device types (MX, EX, QFX)
+- Bug fixes and performance improvements
+- Documentation improvements
 
 ## Contributing
 
