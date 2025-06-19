@@ -66,9 +66,9 @@ module TrainPlugins
 
         super(@options)
 
-        # Establish SSH connection to Juniper device (unless in mock mode)
+        # Establish SSH connection to Juniper device (unless in mock mode or skip_connect)
         @logger.debug('Attempting to connect to Juniper device...')
-        connect unless @options[:mock]
+        connect unless @options[:mock] || @options[:skip_connect]
       end
 
       # Secure string representation (never expose credentials)
@@ -226,9 +226,16 @@ module TrainPlugins
 
       # Check if SSH connection is active
       def connected?
+        return true if @options[:mock]
+
         !@ssh_session.nil?
       rescue StandardError
         false
+      end
+
+      # Check if running in mock mode
+      def mock?
+        @options[:mock] == true
       end
 
       # Test connection and configure JunOS session

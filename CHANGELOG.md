@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-06-18
+
+### Fixed
+
+- Fix Windows installation issue by relaxing FFI dependency to match InSpec 7 (>= 1.15.5, < 1.17.0) (#2)
+- Fix mock mode platform detection to correctly show JunOS version instead of gem version
+- Update release workflow to use trusted publishing with OIDC authentication
+- Update workflows to use Ruby 3.3 for improved trusted publishing support
+
+### Added
+
+- Add `mock?` method to properly support mock mode in platform detection
+- Add comprehensive mock mode documentation to README
+
+### Changed
+
+- Update release process documentation to reflect trusted publishing setup
+
 ## [0.6.1] - 2025-06-18
 
 ### Fixed

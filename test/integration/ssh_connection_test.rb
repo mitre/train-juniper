@@ -21,13 +21,17 @@ describe 'SSH Connection Integration' do
 
   describe 'SSH connection establishment' do
     it 'should validate connection state correctly' do
-      # Test connection state checking - stays in mock mode
-      _(connection.send(:connected?)).must_equal(false)
+      # In mock mode, connected? should return true
+      _(connection.send(:connected?)).must_equal(true)
+
+      # Test non-mock mode
+      non_mock_connection = TrainPlugins::Juniper::Connection.new(connection_options.merge(mock: false, skip_connect: true))
+      _(non_mock_connection.send(:connected?)).must_equal(false)
 
       # Mock an SSH session to test connected? method
       mock_ssh = Object.new
-      connection.instance_variable_set(:@ssh_session, mock_ssh)
-      _(connection.send(:connected?)).must_equal(true)
+      non_mock_connection.instance_variable_set(:@ssh_session, mock_ssh)
+      _(non_mock_connection.send(:connected?)).must_equal(true)
     end
 
     it 'should validate proxy options during initialization' do

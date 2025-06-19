@@ -30,6 +30,11 @@ The train-juniper project uses a semi-automated release process that follows the
    bundle exec rake security
    ```
 
+4. **Verify trusted publishing is configured** on RubyGems.org:
+   - Go to https://rubygems.org/gems/train-juniper/trusted_publishers
+   - Should show: GitHub Repository: `mitre/train-juniper`, Workflow: `release-tag.yml`
+   - No API keys needed - uses OIDC authentication!
+
 ## Release Steps
 
 ### 1. Choose Version Bump Type
@@ -96,8 +101,7 @@ bundle exec rake release
 This will:
 - ✅ Create tag `v{version}`
 - ✅ Push the tag to GitHub
-- ✅ Build the gem
-- ✅ Push to RubyGems (using trusted publishing)
+- ⏭️ Trigger GitHub Actions to build and publish the gem
 
 ### 5. Automated Publication
 
@@ -106,7 +110,8 @@ Once the tag is pushed, GitHub Actions will automatically:
 2. Run security audits
 3. Run linting checks
 4. Create a GitHub Release using the pre-generated release notes
-5. Build and publish the gem to RubyGems.org
+5. Build the gem
+6. Publish to RubyGems.org using trusted publishing (OIDC authentication)
 
 Monitor the release workflow at: https://github.com/mitre/train-juniper/actions
 
@@ -174,7 +179,7 @@ gem push train-juniper-{version}.gem
 
 ### GitHub Actions failing
 - Check the [Actions tab](https://github.com/mitre/train-juniper/actions)
-- Ensure all secrets are configured (RUBYGEMS_API_KEY)
+- Ensure trusted publishing is configured on RubyGems.org
 - Verify all tests pass locally first
 
 ## Version History

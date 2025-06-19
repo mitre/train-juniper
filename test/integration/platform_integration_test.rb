@@ -30,21 +30,30 @@ describe 'Platform Detection Integration' do
     end
 
     it 'should force platform without detection when connection not ready' do
-      connection = TrainPlugins::Juniper::Connection.new(connection_options)
+      # Use non-mock mode to test fallback behavior
+      options = connection_options.merge(mock: false, skip_connect: true)
+      connection = TrainPlugins::Juniper::Connection.new(options)
 
-      # Mock no connection
-      connection.instance_variable_set(:@ssh_connection, nil)
+      # Ensure no connection
+      connection.instance_variable_set(:@ssh_session, nil)
 
       platform_obj = connection.platform
 
-      # Should use plugin version as fallback
+      # Should use plugin version as fallback when not connected
       _(platform_obj.release).must_equal(TrainPlugins::Juniper::VERSION)
       # Arch is not set since we removed it to fix family detection
     end
 
     it 'should use plugin version as fallback when version detection fails' do
-      # In mock mode, version detection is skipped
-      connection = TrainPlugins::Juniper::Connection.new(connection_options)
+      # Use non-mock mode to test fallback behavior
+      options = connection_options.merge(mock: false, skip_connect: true)
+      connection = TrainPlugins::Juniper::Connection.new(options)
+
+      # Mark as connected but make version detection fail
+      connection.define_singleton_method(:connected?) { true }
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        raise StandardError, 'Command failed'
+      end
 
       platform_obj = connection.platform
 
@@ -55,69 +64,71 @@ describe 'Platform Detection Integration' do
 
   describe 'version detection error handling' do
     it 'should handle connection failure during version detection' do
-      connection = TrainPlugins::Juniper::Connection.new(connection_options)
+      # Use non-mock mode to test error handling
+      options = connection_options.merge(mock: false, skip_connect: true)
+      connection = TrainPlugins::Juniper::Connection.new(options)
 
-      # Mock failed command execution
-      mock_ssh = Class.new do
-        def run_command(_cmd)
-          Train::Extras::CommandResult.new('', 'Connection failed', 1)
-        end
-      end.new
+      # Override run_command_via_connection to simulate failure
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        TrainPlugins::Juniper::CommandResult.new('', 'Connection failed', 1)
+      end
 
-      connection.instance_variable_set(:@ssh_connection, mock_ssh)
-      def connected? = true
+      # Mark as connected
+      connection.define_singleton_method(:connected?) { true }
 
       version = connection.send(:detect_junos_version)
       _(version).must_be_nil
     end
 
     it 'should handle malformed version output gracefully' do
-      connection = TrainPlugins::Juniper::Connection.new(connection_options)
+      # Use non-mock mode to test error handling
+      options = connection_options.merge(mock: false, skip_connect: true)
+      connection = TrainPlugins::Juniper::Connection.new(options)
 
-      # Mock command with invalid output
-      mock_ssh = Class.new do
-        def run_command(_cmd)
-          Train::Extras::CommandResult.new('No version info here', '', 0)
-        end
-      end.new
+      # Override run_command_via_connection with invalid output
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        TrainPlugins::Juniper::CommandResult.new('No version info here', '', 0)
+      end
 
-      connection.instance_variable_set(:@ssh_connection, mock_ssh)
-      def connected? = true
+      # Mark as connected
+      connection.define_singleton_method(:connected?) { true }
 
       version = connection.send(:detect_junos_version)
       _(version).must_be_nil
     end
 
     it 'should handle exceptions during version detection' do
-      connection = TrainPlugins::Juniper::Connection.new(connection_options)
+      # Use non-mock mode to test error handling
+      options = connection_options.merge(mock: false, skip_connect: true)
+      connection = TrainPlugins::Juniper::Connection.new(options)
 
-      # Mock command that raises exception
-      mock_ssh = Class.new do
-        def run_command(_cmd)
-          raise StandardError, 'Network timeout'
-        end
-      end.new
+      # Override run_command_via_connection to raise exception
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        raise StandardError, 'Network timeout'
+      end
 
-      connection.instance_variable_set(:@ssh_connection, mock_ssh)
-      def connected? = true
+      # Mark as connected
+      connection.define_singleton_method(:connected?) { true }
 
       version = connection.send(:detect_junos_version)
       _(version).must_be_nil
     end
 
-    it 'should skip version detection in mock mode' do
+    it 'should detect version in mock mode' do
       mock_options = connection_options.merge(mock: true)
       connection = TrainPlugins::Juniper::Connection.new(mock_options)
 
       version = connection.send(:detect_junos_version)
-      _(version).must_be_nil
+      _(version).must_equal '12.1X47-D15.4'
     end
 
     it 'should skip version detection when not connected' do
-      connection = TrainPlugins::Juniper::Connection.new(connection_options)
+      # Use non-mock mode to test not connected state
+      options = connection_options.merge(mock: false, skip_connect: true)
+      connection = TrainPlugins::Juniper::Connection.new(options)
 
       # Ensure not connected
-      connection.instance_variable_set(:@ssh_connection, nil)
+      connection.instance_variable_set(:@ssh_session, nil)
 
       version = connection.send(:detect_junos_version)
       _(version).must_be_nil

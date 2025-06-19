@@ -303,6 +303,40 @@ ping device.internal  # From bastion host
 telnet device.internal 22  # Test SSH port
 ```
 
+## Mock Mode (Testing Without Hardware)
+
+The train-juniper plugin includes a comprehensive mock mode for testing profiles without requiring physical Juniper hardware:
+
+```bash
+# Use mock mode with InSpec detect
+inspec detect -t "juniper://admin@mock-device?mock=true"
+
+# Output shows mocked JunOS platform:
+# Name:      juniper
+# Families:  bsd
+# Release:   12.1X47-D15.4
+```
+
+For programmatic usage in tests:
+```ruby
+require 'train'
+connection = Train.create('juniper', 
+  host: 'test-device',
+  user: 'admin',
+  mock: true
+)
+
+# Mock mode returns predefined responses
+result = connection.run_command('show version')
+# => Returns mock JunOS version output
+```
+
+Mock mode provides:
+- ✅ Realistic JunOS command outputs
+- ✅ Platform detection (JunOS 12.1X47-D15.4)
+- ✅ Error simulation for negative testing
+- ✅ Fast execution for CI/CD pipelines
+
 ## Development
 
 ### Requirements

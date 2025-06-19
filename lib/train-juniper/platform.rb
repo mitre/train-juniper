@@ -52,16 +52,28 @@ module TrainPlugins::Juniper
       return @detected_junos_version if defined?(@detected_junos_version)
 
       # Only try version detection if we have an active connection
-      return @detected_junos_version = nil unless respond_to?(:run_command_via_connection)
-      return @detected_junos_version = nil if @options&.dig(:mock) # Skip in mock mode
+      unless respond_to?(:run_command_via_connection)
+        logger&.debug('run_command_via_connection not available yet')
+        return @detected_junos_version = nil
+      end
+
+      logger&.debug("Mock mode: #{@options&.dig(:mock)}, Connected: #{connected?}")
 
       begin
         # Check if connection is ready before running commands
-        return @detected_junos_version = nil unless connected?
+        unless connected?
+          logger&.debug('Not connected, skipping version detection')
+          return @detected_junos_version = nil
+        end
 
         # Execute 'show version' command to get JunOS information
+        logger&.debug("Running 'show version' command")
         result = run_command_via_connection('show version')
-        return @detected_junos_version = nil unless result&.exit_status&.zero?
+
+        unless result&.exit_status&.zero?
+          logger&.debug("Command failed with exit status: #{result&.exit_status}")
+          return @detected_junos_version = nil
+        end
 
         # Cache the result for architecture detection to avoid duplicate calls
         @cached_show_version_result = result
@@ -112,7 +124,6 @@ module TrainPlugins::Juniper
 
       # Only try architecture detection if we have an active connection
       return @detected_junos_architecture = nil unless respond_to?(:run_command_via_connection)
-      return @detected_junos_architecture = nil if @options&.dig(:mock) # Skip in mock mode
 
       begin
         # Check if connection is ready before running commands

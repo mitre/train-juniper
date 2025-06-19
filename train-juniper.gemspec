@@ -67,6 +67,7 @@ Gem::Specification.new do |spec|
   # SSH connectivity dependencies - match train-core's exact version range
   spec.add_dependency 'net-ssh', '>= 2.9', '< 8.0'
 
-  # Force compatible FFI version to avoid conflicts with InSpec
-  spec.add_dependency 'ffi', '~> 1.16.0'
+  # FFI dependency - required by train-core
+  # Match InSpec 7's FFI version range for compatibility
+  spec.add_dependency 'ffi', '>= 1.15.5', '< 1.17.0'
 end
