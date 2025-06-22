@@ -45,54 +45,46 @@ module TrainPlugins::Juniper
 
     private
 
-    # Detect JunOS version from device output
-    # This runs safely after the connection is established
-    def detect_junos_version
-      # Return cached version if already detected
-      return @detected_junos_version if defined?(@detected_junos_version)
+    # Generic detection helper for version and architecture
+    def detect_attribute(attribute_name, command = 'show version', &extraction_block)
+      cache_var = "@detected_#{attribute_name}"
+      return instance_variable_get(cache_var) if instance_variable_defined?(cache_var)
 
-      # Only try version detection if we have an active connection
       unless respond_to?(:run_command_via_connection)
         logger&.debug('run_command_via_connection not available yet')
-        return @detected_junos_version = nil
+        return instance_variable_set(cache_var, nil)
       end
 
       logger&.debug("Mock mode: #{@options&.dig(:mock)}, Connected: #{connected?}")
 
       begin
-        # Check if connection is ready before running commands
-        unless connected?
-          logger&.debug('Not connected, skipping version detection')
-          return @detected_junos_version = nil
-        end
+        return instance_variable_set(cache_var, nil) unless connected?
 
-        # Execute 'show version' command to get JunOS information
-        logger&.debug("Running 'show version' command")
-        result = run_command_via_connection('show version')
+        # Reuse cached command result if available
+        result = @cached_show_version_result || run_command_via_connection(command)
+        @cached_show_version_result ||= result if command == 'show version' && result&.exit_status&.zero?
 
-        unless result&.exit_status&.zero?
-          logger&.debug("Command failed with exit status: #{result&.exit_status}")
-          return @detected_junos_version = nil
-        end
+        return instance_variable_set(cache_var, nil) unless result&.exit_status&.zero?
 
-        # Cache the result for architecture detection to avoid duplicate calls
-        @cached_show_version_result = result
+        value = extraction_block.call(result.stdout)
 
-        # Parse JunOS version from output using multiple patterns
-        version = extract_version_from_output(result.stdout)
-
-        if version
-          logger&.debug("Detected JunOS version: #{version}")
-          @detected_junos_version = version
+        if value
+          logger&.debug("Detected #{attribute_name}: #{value}")
+          instance_variable_set(cache_var, value)
         else
-          logger&.debug("Could not parse JunOS version from: #{result.stdout[0..100]}")
-          @detected_junos_version = nil
+          logger&.debug("Could not parse #{attribute_name} from: #{result.stdout[0..100]}")
+          instance_variable_set(cache_var, nil)
         end
       rescue StandardError => e
-        # If version detection fails, log and return nil
-        logger&.debug("JunOS version detection failed: #{e.message}")
-        @detected_junos_version = nil
+        logger&.debug("#{attribute_name} detection failed: #{e.message}")
+        instance_variable_set(cache_var, nil)
       end
+    end
+
+    # Detect JunOS version from device output
+    # This runs safely after the connection is established
+    def detect_junos_version
+      detect_attribute('junos_version') { |output| extract_version_from_output(output) }
     end
 
     # Extract version string from JunOS show version output
@@ -119,44 +111,7 @@ module TrainPlugins::Juniper
     # Detect JunOS architecture from device output
     # This runs safely after the connection is established
     def detect_junos_architecture
-      # Return cached architecture if already detected
-      return @detected_junos_architecture if defined?(@detected_junos_architecture)
-
-      # Only try architecture detection if we have an active connection
-      return @detected_junos_architecture = nil unless respond_to?(:run_command_via_connection)
-
-      begin
-        # Check if connection is ready before running commands
-        return @detected_junos_architecture = nil unless connected?
-
-        # Reuse version detection result to avoid duplicate 'show version' calls
-        # Both version and architecture come from the same command output
-        if defined?(@detected_junos_version) && @detected_junos_version
-          # We already have the output from version detection, parse architecture from it
-          result = @cached_show_version_result
-        else
-          # Execute 'show version' command and cache the result
-          result = run_command_via_connection('show version')
-          @cached_show_version_result = result if result&.exit_status&.zero?
-        end
-
-        return @detected_junos_architecture = nil unless result&.exit_status&.zero?
-
-        # Parse architecture from output using multiple patterns
-        arch = extract_architecture_from_output(result.stdout)
-
-        if arch
-          logger&.debug("Detected JunOS architecture: #{arch}")
-          @detected_junos_architecture = arch
-        else
-          logger&.debug("Could not parse JunOS architecture from: #{result.stdout[0..100]}")
-          @detected_junos_architecture = nil
-        end
-      rescue StandardError => e
-        # If architecture detection fails, log and return nil
-        logger&.debug("JunOS architecture detection failed: #{e.message}")
-        @detected_junos_architecture = nil
-      end
+      detect_attribute('junos_architecture') { |output| extract_architecture_from_output(output) }
     end
 
     # Extract architecture string from JunOS show version output
