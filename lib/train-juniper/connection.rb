@@ -73,13 +73,11 @@ module TrainPlugins
         @cli_prompt = /[%>$#]\s*$/
         @config_prompt = /[%#]\s*$/
 
-        # Log connection info without exposing credentials
-        safe_options = @options.except(:password, :proxy_command, :key_files)
-        @logger.debug("Juniper connection initialized with options: #{safe_options.inspect}")
-        @logger.debug("Environment: JUNIPER_BASTION_USER=#{env_value('JUNIPER_BASTION_USER')} -> bastion_user=#{@options[:bastion_user]}")
+        # Log connection info safely
+        log_connection_info
 
-        # Validate proxy configuration early (Train standard)
-        validate_proxy_options
+        # Validate all connection options
+        validate_connection_options!
 
         super(@options)
 
@@ -97,8 +95,15 @@ module TrainPlugins
         to_s
       end
 
-      # File operations for Juniper configuration files
-      # Supports reading configuration files and operational data
+      # Access Juniper configuration and operational data as pseudo-files
+      # @param path [String] The pseudo-file path to access
+      # @return [JuniperFile] A file-like object for accessing Juniper data
+      # @example Access interface configuration
+      #   file = connection.file('/config/interfaces')
+      #   puts file.content
+      # @example Access operational data
+      #   file = connection.file('/operational/interfaces')
+      #   puts file.content
       def file_via_connection(path)
         # For Juniper devices, "files" are typically configuration sections
         # or operational command outputs rather than traditional filesystem paths
@@ -117,22 +122,31 @@ module TrainPlugins
       end
 
       # Execute commands on Juniper device via SSH
+      # @param cmd [String] The JunOS command to execute
+      # @return [CommandResult] Result object with stdout, stderr, and exit status
+      # @raise [Train::ClientError] If command contains dangerous characters
+      # @example
+      #   result = connection.run_command('show version')
+      #   puts result.stdout
       def run_command_via_connection(cmd)
-        return mock_command_result(cmd) if @options[:mock]
+        # Sanitize command to prevent injection
+        safe_cmd = sanitize_command(cmd)
+        
+        return mock_command_result(safe_cmd) if @options[:mock]
 
         begin
           # Ensure we're connected
           connect unless connected?
 
-          @logger.debug("Executing command: #{cmd}")
+          @logger.debug("Executing command: #{safe_cmd}")
 
           # Execute command via SSH session
-          output = @ssh_session.exec!(cmd)
+          output = @ssh_session.exec!(safe_cmd)
 
           @logger.debug("Command output: #{output}")
 
           # Format JunOS result
-          format_junos_result(output, cmd)
+          format_junos_result(output, safe_cmd)
         rescue StandardError => e
           @logger.error("Command execution failed: #{e.message}")
           # Handle connection errors gracefully
@@ -176,7 +190,51 @@ module TrainPlugins
         'show interfaces' => "Physical interface: ge-0/0/0, Enabled, Physical link is Up\n"
       }.freeze
 
+      # Command sanitization patterns
+      # Note: Pipe (|) is allowed as it's commonly used in JunOS commands
+      DANGEROUS_COMMAND_PATTERNS = [
+        /[;&<>$`]/,     # Shell metacharacters (excluding pipe)
+        /\n|\r/,        # Newlines that could inject commands
+        /\\(?![nrt])/   # Escape sequences (except valid ones like \n, \r, \t)
+      ].freeze
+
+      # Check connection health
+      # @return [Boolean] true if connection is healthy, false otherwise
+      # @example
+      #   if connection.healthy?
+      #     puts "Connection is healthy"
+      #   end
+      def healthy?
+        return false unless connected?
+        
+        result = run_command_via_connection('show version')
+        result.exit_status.zero?
+      rescue StandardError
+        false
+      end
+
       private
+
+      # List of sensitive option keys to redact in logs
+      SENSITIVE_OPTIONS = %i[password bastion_password key_files proxy_command].freeze
+
+      # Log connection info without exposing sensitive data
+      def log_connection_info
+        safe_options = @options.reject { |k, _| SENSITIVE_OPTIONS.include?(k) }
+        @logger.debug("Juniper connection initialized with options: #{safe_options.inspect}")
+        @logger.debug("Environment: JUNIPER_BASTION_USER=#{env_value('JUNIPER_BASTION_USER')} -> bastion_user=#{@options[:bastion_user]}")
+      end
+
+      # Sanitize command to prevent injection attacks
+      def sanitize_command(cmd)
+        cmd_str = cmd.to_s.strip
+        
+        if DANGEROUS_COMMAND_PATTERNS.any? { |pattern| cmd_str.match?(pattern) }
+          raise Train::ClientError, "Invalid characters in command: #{cmd_str.inspect}"
+        end
+        
+        cmd_str
+      end
 
       # Establish SSH connection to Juniper device
       def connect
@@ -347,8 +405,52 @@ module TrainPlugins
         )
       end
 
+      # Validate all connection options
+      def validate_connection_options!
+        validate_required_options!
+        validate_option_types!
+        validate_proxy_options!
+      end
+
+      # Validate required options are present
+      def validate_required_options!
+        raise Train::ClientError, 'Host is required' unless @options[:host]
+        raise Train::ClientError, 'User is required' unless @options[:user]
+      end
+
+      # Validate option types and ranges
+      def validate_option_types!
+        validate_port! if @options[:port]
+        validate_timeout! if @options[:timeout]
+        validate_bastion_port! if @options[:bastion_port]
+      end
+
+      # Validate port is in valid range
+      def validate_port!
+        port = @options[:port].to_i
+        unless port.between?(1, 65535)
+          raise Train::ClientError, "Invalid port: #{@options[:port]} (must be 1-65535)"
+        end
+      end
+
+      # Validate timeout is positive number
+      def validate_timeout!
+        timeout = @options[:timeout]
+        unless timeout.is_a?(Numeric) && timeout.positive?
+          raise Train::ClientError, "Invalid timeout: #{timeout} (must be positive number)"
+        end
+      end
+
+      # Validate bastion port is in valid range
+      def validate_bastion_port!
+        port = @options[:bastion_port].to_i
+        unless port.between?(1, 65535)
+          raise Train::ClientError, "Invalid bastion_port: #{@options[:bastion_port]} (must be 1-65535)"
+        end
+      end
+
       # Validate proxy configuration options (Train standard)
-      def validate_proxy_options
+      def validate_proxy_options!
         # Cannot use both bastion_host and proxy_command simultaneously
         if @options[:bastion_host] && @options[:proxy_command]
           raise Train::ClientError, 'Cannot specify both bastion_host and proxy_command'

@@ -203,4 +203,149 @@ describe TrainPlugins::Juniper::Connection do
       _(-> { connection.download(['/file1.txt', '/file2.txt'], '/local/') }).must_raise(NotImplementedError)
     end
   end
+
+  describe 'input validation' do
+    it 'should require host option' do
+      options = mock_options.dup
+      options.delete(:host)
+      _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
+    end
+
+    it 'should require user option' do
+      options = mock_options.dup
+      options.delete(:user)
+      _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
+    end
+
+    it 'should validate port range' do
+      options = mock_options.merge(port: 70000)
+      err = _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
+      _(err.message).must_match(/Invalid port.*must be 1-65535/)
+    end
+
+    it 'should accept string ports and convert them' do
+      options = mock_options.merge(port: '2222')
+      connection = connection_class.new(options)
+      _(connection).must_be_kind_of(connection_class)
+    end
+
+    it 'should validate timeout is positive' do
+      options = mock_options.merge(timeout: -5)
+      err = _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
+      _(err.message).must_match(/Invalid timeout.*must be positive/)
+    end
+
+    it 'should validate bastion port range' do
+      options = mock_options.merge(bastion_host: 'jump.host', bastion_port: 0)
+      err = _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
+      _(err.message).must_match(/Invalid bastion_port.*must be 1-65535/)
+    end
+  end
+
+  describe 'command sanitization' do
+    let(:connection) { connection_class.new(mock_options) }
+
+    it 'should allow safe JunOS commands' do
+      safe_commands = [
+        'show version',
+        'show configuration',
+        'show interfaces terse',
+        'show configuration | display set',
+        'show configuration | match "interface"'
+      ]
+      
+      safe_commands.each do |cmd|
+        result = connection.run_command(cmd)
+        _(result).must_be_kind_of(Train::Extras::CommandResult)
+      end
+    end
+
+    it 'should block commands with dangerous shell metacharacters' do
+      dangerous_commands = [
+        'show version; rm -rf /',
+        'show version && malicious',
+        'show version & background',
+        'show version > /tmp/output',
+        'show version < /etc/passwd',
+        'show version `evil`',
+        'show version $(evil)'
+      ]
+      
+      dangerous_commands.each do |cmd|
+        err = _(-> { connection.run_command(cmd) }).must_raise(Train::ClientError)
+        _(err.message).must_match(/Invalid characters in command/)
+      end
+    end
+
+    it 'should block commands with newlines' do
+      _(-> { connection.run_command("show version\nmalicious command") }).must_raise(Train::ClientError)
+    end
+
+    it 'should block invalid escape sequences but allow valid ones' do
+      # Should block invalid escapes
+      _(-> { connection.run_command('show version \x00') }).must_raise(Train::ClientError)
+      
+      # Should allow valid escapes like \n, \r, \t (though unusual in commands)
+      result = connection.run_command('show configuration | match "test\n"')
+      _(result).must_be_kind_of(Train::Extras::CommandResult)
+    end
+  end
+
+  describe 'health check' do
+    it 'should return true for healthy mock connection' do
+      connection = connection_class.new(mock_options)
+      _(connection.healthy?).must_equal(true)
+    end
+
+    it 'should return false when command fails' do
+      connection = connection_class.new(mock_options)
+      # Simulate a failed command
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        Train::Extras::CommandResult.new('', 'error', 1)
+      end
+      _(connection.healthy?).must_equal(false)
+    end
+
+    it 'should return false when exception occurs' do
+      connection = connection_class.new(mock_options)
+      # Simulate an exception
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        raise StandardError, 'Connection error'
+      end
+      _(connection.healthy?).must_equal(false)
+    end
+  end
+
+  describe 'safe logging' do
+    it 'should not expose sensitive data in logs' do
+      # Capture logger output
+      require 'stringio'
+      log_output = StringIO.new
+      logger = Logger.new(log_output)
+      
+      sensitive_options = {
+        host: 'test.device',
+        user: 'admin',
+        password: 'super_secret_password',
+        bastion_password: 'bastion_secret',
+        key_files: ['/path/to/key'],
+        proxy_command: 'ssh -W %h:%p proxy',
+        mock: true,
+        logger: logger
+      }
+      
+      connection_class.new(sensitive_options)
+      log_content = log_output.string
+      
+      # Should not contain sensitive information
+      _(log_content).wont_match(/super_secret_password/)
+      _(log_content).wont_match(/bastion_secret/)
+      _(log_content).wont_match(/\/path\/to\/key/)
+      _(log_content).wont_match(/ssh -W/)
+      
+      # Should contain safe information
+      _(log_content).must_match(/test\.device/)
+      _(log_content).must_match(/admin/)
+    end
+  end
 end

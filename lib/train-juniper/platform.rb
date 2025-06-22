@@ -93,11 +93,11 @@ module TrainPlugins::Juniper
 
       # Try multiple JunOS version patterns
       patterns = [
-        /Junos:\s+([\d\w\.-]+)/,                           # "Junos: 12.1X47-D15.4"
-        /JUNOS Software Release \[([\d\w\.-]+)\]/,         # "JUNOS Software Release [12.1X47-D15.4]"
-        /junos version ([\d\w\.-]+)/i,                     # "junos version 21.4R3"
-        /Model: \S+, JUNOS Base OS boot \[([\d\w\.-]+)\]/, # Some hardware variants
-        /([\d]+\.[\d]+[\w\.-]*)/                           # Generic version pattern
+        /Junos:\s+([\w\d.-]+)/,                           # "Junos: 12.1X47-D15.4"
+        /JUNOS Software Release \[([\w\d.-]+)\]/,         # "JUNOS Software Release [12.1X47-D15.4]"
+        /junos version ([\w\d.-]+)/i,                     # "junos version 21.4R3"
+        /Model: \S+, JUNOS Base OS boot \[([\w\d.-]+)\]/, # Some hardware variants
+        /([\d]+\.[\d]+[\w.-]*)/                           # Generic version pattern
       ]
 
       patterns.each do |pattern|
@@ -121,7 +121,7 @@ module TrainPlugins::Juniper
       # Try multiple JunOS architecture patterns
       patterns = [
         /Model:\s+(\S+)/, # "Model: SRX240H2" -> extract model as arch indicator
-        /Junos:\s+[\d\w\.-]+\s+built\s+[\d-]+\s+[\d:]+\s+by\s+builder\s+on\s+(\S+)/, # Build architecture
+        /Junos:\s+[\w\d.-]+\s+built\s+[\d-]+\s+[\d:]+\s+by\s+builder\s+on\s+(\S+)/, # Build architecture
         /JUNOS.*\[([\w-]+)\]/,                                 # JUNOS package architecture
         /Architecture:\s+(\S+)/i,                              # Direct architecture line
         /Platform:\s+(\S+)/i,                                  # Platform designation
