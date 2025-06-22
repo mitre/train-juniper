@@ -43,19 +43,18 @@ module TrainPlugins
       }.freeze
 
       def initialize(options)
-        
         # Configure SSH connection options for Juniper devices
         # Support environment variables for authentication (following train-vsphere pattern)
         @options = options.dup
-        
+
         # Apply environment variable configuration using DRY approach
         ENV_CONFIG.each do |key, config|
           # Skip if option already has a value from command line
           next if @options[key]
-          
+
           # Get value from environment
           env_val = config[:type] == :int ? env_int(config[:env]) : env_value(config[:env])
-          
+
           # Only apply env value if it exists, otherwise use default (but not for nil CLI values)
           if env_val
             @options[key] = env_val
@@ -66,7 +65,6 @@ module TrainPlugins
 
         @options[:keepalive] = true
         @options[:keepalive_interval] = 60
-
 
         # Setup logger
         @logger = @options[:logger] || Logger.new(STDOUT, level: Logger::WARN)
@@ -295,8 +293,9 @@ module TrainPlugins
       # Helper method to safely get environment variable value
       # Returns nil if env var is not set or is empty string
       def env_value(key)
-        value = ENV[key]
+        value = ENV.fetch(key, nil)
         return nil if value.nil? || value.empty?
+
         value
       end
 
@@ -305,6 +304,7 @@ module TrainPlugins
       def env_int(key)
         value = env_value(key)
         return nil unless value
+
         value.to_i
       rescue ArgumentError
         nil

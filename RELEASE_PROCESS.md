@@ -184,4 +184,4 @@ gem push train-juniper-{version}.gem
 
 ## Version History
 
-See [CHANGELOG.md](../CHANGELOG.md) for the complete version history.
+See [CHANGELOG](/CHANGELOG/) for the complete version history.

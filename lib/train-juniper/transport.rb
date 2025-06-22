@@ -46,9 +46,6 @@ module TrainPlugins
 
       # Create and return a connection to a Juniper device
       def connection(_instance_opts = nil)
-        # Debug: Log all options received from InSpec
-        puts "DEBUG Transport: Options received: #{@options.inspect}"
-        
         # Cache the connection instance for reuse
         # @options contains parsed connection details from train URI
         @connection ||= TrainPlugins::Juniper::Connection.new(@options)
