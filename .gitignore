@@ -70,3 +70,6 @@ recovery-prompt.md
 SESSION-SUMMARY.md
 TODAY-COMPLETION-MATRIX.md
 TODO-MATRIX.md
+
+# InSpec resource pack (separate project)
+inspec-resources/

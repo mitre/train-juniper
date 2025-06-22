@@ -20,7 +20,7 @@ module TrainPlugins
 
       # Proxy/Bastion host support (Train standard options)
       option :bastion_host, default: nil
-      option :bastion_user, default: nil # Let connection handle env vars and defaults
+      option :bastion_user, default: nil # Falls back to main user if not specified
       option :bastion_port, default: 22
       option :bastion_password, default: nil # Separate password for bastion authentication
       option :proxy_command, default: nil
@@ -46,6 +46,9 @@ module TrainPlugins
 
       # Create and return a connection to a Juniper device
       def connection(_instance_opts = nil)
+        # Debug: Log all options received from InSpec
+        puts "DEBUG Transport: Options received: #{@options.inspect}"
+        
         # Cache the connection instance for reuse
         # @options contains parsed connection details from train URI
         @connection ||= TrainPlugins::Juniper::Connection.new(@options)

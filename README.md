@@ -77,23 +77,29 @@ inspec> command('show version').stdout
 ### With Bastion Host (Jump Host)
 
 ```bash
-# Using Train standard bastion host options
-$ inspec shell -t "juniper://admin@10.1.1.1?bastion_host=jump.example.com&bastion_user=netadmin&bastion_password=jumppass"
+# Simplified: Same username/password for bastion and device (most common)
+$ inspec shell -t juniper://admin@10.1.1.1 --password yourpassword \
+    --bastion-host jump.example.com
+
+# Different credentials for bastion and device
+$ inspec shell -t juniper://admin@10.1.1.1 --password device_password \
+    --bastion-host jump.example.com --bastion-user netadmin \
+    --bastion-password jump_password
 
 # With custom port
-$ inspec shell -t "juniper://admin@10.1.1.1?bastion_host=jump.example.com&bastion_user=netadmin&bastion_port=2222&bastion_password=jumppass"
+$ inspec shell -t juniper://admin@10.1.1.1 --password yourpassword \
+    --bastion-host jump.example.com --bastion-port 2222
 
 # Using environment variables (recommended for automation)
+export JUNIPER_BASTION_HOST=jump.example.com
+export JUNIPER_PASSWORD=shared_password  # Used for both bastion and device
+$ inspec shell -t juniper://admin@10.1.1.1
+
+# Different passwords via environment
 export JUNIPER_BASTION_HOST=jump.example.com
 export JUNIPER_BASTION_USER=netadmin  
 export JUNIPER_BASTION_PASSWORD=jump_password
 export JUNIPER_PASSWORD=device_password
-$ inspec shell -t juniper://admin@10.1.1.1
-
-# Same password for both bastion and device (common scenario)
-export JUNIPER_BASTION_HOST=jump.example.com
-export JUNIPER_BASTION_USER=admin
-export JUNIPER_PASSWORD=shared_password  # Used for both when bastion_password not set
 $ inspec shell -t juniper://admin@10.1.1.1
 ```
 
@@ -135,6 +141,16 @@ inspec detect -t juniper://  # Reads from .env automatically
 
 ## Configuration Options
 
+### Option Priority
+
+The plugin uses the following priority order for configuration values:
+
+1. **Command-line flags** (highest priority) - e.g., `--bastion-user`
+2. **Environment variables** - e.g., `JUNIPER_BASTION_USER`  
+3. **Defaults/Fallbacks** (lowest priority) - e.g., bastion_user falls back to main user
+
+This allows maximum flexibility while providing sensible defaults for common scenarios.
+
 ### Connection Options
 
 | Option | Description | Default | Environment Variable |
@@ -152,7 +168,7 @@ inspec detect -t juniper://  # Reads from .env automatically
 | Option | Description | Default | Environment Variable |
 |--------|-------------|---------|---------------------|
 | `bastion_host` | SSH bastion/jump host | - | `JUNIPER_BASTION_HOST` |
-| `bastion_user` | SSH bastion username | root | `JUNIPER_BASTION_USER` |
+| `bastion_user` | SSH bastion username | Falls back to main `user` | `JUNIPER_BASTION_USER` |
 | `bastion_port` | SSH bastion port | 22 | `JUNIPER_BASTION_PORT` |
 | `bastion_password` | Password for bastion authentication | - | `JUNIPER_BASTION_PASSWORD` |
 | `proxy_command` | Custom SSH ProxyCommand | - | `JUNIPER_PROXY_COMMAND` |
@@ -161,7 +177,8 @@ inspec detect -t juniper://  # Reads from .env automatically
 
 **Notes**: 
 - Cannot specify both `bastion_host` and `proxy_command` simultaneously
-- If `bastion_password` not provided, falls back to using `password` for bastion authentication
+- If `bastion_user` not provided, falls back to using main `user` for bastion authentication
+- If `bastion_password` not provided, falls back to using main `password` for bastion authentication
 - Supports automated password authentication via SSH_ASKPASS mechanism
 
 ### InSpec Configuration File

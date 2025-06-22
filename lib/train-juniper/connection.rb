@@ -28,25 +28,45 @@ module TrainPlugins
 
       attr_reader :ssh_session
 
+      # Configuration mapping for environment variables
+      ENV_CONFIG = {
+        host: { env: 'JUNIPER_HOST' },
+        user: { env: 'JUNIPER_USER' },
+        password: { env: 'JUNIPER_PASSWORD' },
+        port: { env: 'JUNIPER_PORT', type: :int, default: 22 },
+        timeout: { env: 'JUNIPER_TIMEOUT', type: :int, default: 30 },
+        bastion_host: { env: 'JUNIPER_BASTION_HOST' },
+        bastion_user: { env: 'JUNIPER_BASTION_USER' },
+        bastion_port: { env: 'JUNIPER_BASTION_PORT', type: :int, default: 22 },
+        bastion_password: { env: 'JUNIPER_BASTION_PASSWORD' },
+        proxy_command: { env: 'JUNIPER_PROXY_COMMAND' }
+      }.freeze
+
       def initialize(options)
+        
         # Configure SSH connection options for Juniper devices
         # Support environment variables for authentication (following train-vsphere pattern)
         @options = options.dup
-        @options[:host] ||= ENV.fetch('JUNIPER_HOST', nil)
-        @options[:user] ||= ENV.fetch('JUNIPER_USER', nil)
-        @options[:password] ||= ENV.fetch('JUNIPER_PASSWORD', nil)
-        @options[:port] ||= ENV['JUNIPER_PORT']&.to_i || 22
-        @options[:timeout] ||= ENV['JUNIPER_TIMEOUT']&.to_i || 30
-
-        # Proxy/bastion environment variables (Train standard)
-        # Only set from environment if not explicitly provided
-        @options[:bastion_host] = @options[:bastion_host] || ENV.fetch('JUNIPER_BASTION_HOST', nil)
-        @options[:bastion_user] = @options[:bastion_user] || ENV['JUNIPER_BASTION_USER'] || 'root'
-        @options[:bastion_port] = @options[:bastion_port] || ENV['JUNIPER_BASTION_PORT']&.to_i || 22
-        @options[:proxy_command] = @options[:proxy_command] || ENV.fetch('JUNIPER_PROXY_COMMAND', nil)
+        
+        # Apply environment variable configuration using DRY approach
+        ENV_CONFIG.each do |key, config|
+          # Skip if option already has a value from command line
+          next if @options[key]
+          
+          # Get value from environment
+          env_val = config[:type] == :int ? env_int(config[:env]) : env_value(config[:env])
+          
+          # Only apply env value if it exists, otherwise use default (but not for nil CLI values)
+          if env_val
+            @options[key] = env_val
+          elsif !@options.key?(key) && config[:default]
+            @options[key] = config[:default]
+          end
+        end
 
         @options[:keepalive] = true
         @options[:keepalive_interval] = 60
+
 
         # Setup logger
         @logger = @options[:logger] || Logger.new(STDOUT, level: Logger::WARN)
@@ -58,8 +78,7 @@ module TrainPlugins
         # Log connection info without exposing credentials
         safe_options = @options.except(:password, :proxy_command, :key_files)
         @logger.debug("Juniper connection initialized with options: #{safe_options.inspect}")
-        @logger.debug("Environment: JUNIPER_BASTION_USER=#{ENV.fetch('JUNIPER_BASTION_USER',
-                                                                     nil)} -> bastion_user=#{@options[:bastion_user]}")
+        @logger.debug("Environment: JUNIPER_BASTION_USER=#{env_value('JUNIPER_BASTION_USER')} -> bastion_user=#{@options[:bastion_user]}")
 
         # Validate proxy configuration early (Train standard)
         validate_proxy_options
@@ -145,28 +164,15 @@ module TrainPlugins
 
           @logger.debug('Establishing SSH connection to Juniper device')
 
-          ssh_options = {
-            port: @options[:port] || 22,
-            password: @options[:password],
-            timeout: @options[:timeout] || 30,
-            verify_host_key: :never,
-            keepalive: @options[:keepalive],
-            keepalive_interval: @options[:keepalive_interval]
-          }
-
-          # Add SSH key authentication if specified
-          if @options[:key_files]
-            ssh_options[:keys] = Array(@options[:key_files])
-            ssh_options[:keys_only] = @options[:keys_only]
-          end
+          ssh_options = build_ssh_options
 
           # Add bastion host support if configured
           if @options[:bastion_host]
             require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
 
             # Build proxy jump string from bastion options
-            bastion_user = @options[:bastion_user] || 'root'
-            bastion_port = @options[:bastion_port] || 22
+            bastion_user = @options[:bastion_user] || @options[:user] # Use explicit bastion user or fallback to main user
+            bastion_port = @options[:bastion_port]
 
             proxy_jump = if bastion_port == 22
                            "#{bastion_user}@#{@options[:bastion_host]}"
@@ -284,6 +290,42 @@ module TrainPlugins
         lines.pop while lines.last && lines.last.strip.match?(/^[%>$#]+\s*$/)
 
         lines.join("\n")
+      end
+
+      # Helper method to safely get environment variable value
+      # Returns nil if env var is not set or is empty string
+      def env_value(key)
+        value = ENV[key]
+        return nil if value.nil? || value.empty?
+        value
+      end
+
+      # Helper method to get environment variable as integer
+      # Returns nil if env var is not set, empty, or not a valid integer
+      def env_int(key)
+        value = env_value(key)
+        return nil unless value
+        value.to_i
+      rescue ArgumentError
+        nil
+      end
+
+      # Build SSH connection options from @options
+      def build_ssh_options
+        {
+          port: @options[:port],
+          password: @options[:password],
+          timeout: @options[:timeout],
+          verify_host_key: :never,
+          keepalive: @options[:keepalive],
+          keepalive_interval: @options[:keepalive_interval]
+        }.tap do |opts|
+          # Add SSH key authentication if specified
+          if @options[:key_files]
+            opts[:keys] = Array(@options[:key_files])
+            opts[:keys_only] = @options[:keys_only]
+          end
+        end
       end
 
       # Validate proxy configuration options (Train standard)
