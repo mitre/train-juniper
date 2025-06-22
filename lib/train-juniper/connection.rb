@@ -140,14 +140,41 @@ module TrainPlugins
         end
       end
 
-      # JunOS error patterns from implementation plan
-      JUNOS_ERROR_PATTERNS = [
-        /^error:/i,
-        /syntax error/i,
-        /invalid command/i,
-        /unknown command/i,
-        /missing argument/i
-      ].freeze
+      # JunOS error patterns organized by type
+      JUNOS_ERRORS = {
+        configuration: [/^error:/i, /configuration database locked/i],
+        syntax: [/syntax error/i],
+        command: [/invalid command/i, /unknown command/i],
+        argument: [/missing argument/i]
+      }.freeze
+
+      # Flattened error patterns for quick matching
+      JUNOS_ERROR_PATTERNS = JUNOS_ERRORS.values.flatten.freeze
+
+      # SSH option mapping configuration
+      SSH_OPTION_MAPPING = {
+        port: :port,
+        password: :password,
+        timeout: :timeout,
+        keepalive: :keepalive,
+        keepalive_interval: :keepalive_interval,
+        keys: ->(opts) { Array(opts[:key_files]) if opts[:key_files] },
+        keys_only: ->(opts) { opts[:keys_only] if opts[:key_files] }
+      }.freeze
+
+      SSH_DEFAULTS = {
+        verify_host_key: :never
+      }.freeze
+
+      # Mock response configuration
+      MOCK_RESPONSES = {
+        'show version' => :mock_show_version_output,
+        'show chassis hardware' => :mock_chassis_output,
+        'show configuration' => "interfaces {\n    ge-0/0/0 {\n        unit 0;\n    }\n}",
+        'show route' => "inet.0: 5 destinations, 5 routes\n0.0.0.0/0       *[Static/5] 00:00:01\n",
+        'show system information' => "Hardware: SRX240H2\nOS: JUNOS 12.1X47-D15.4\n",
+        'show interfaces' => "Physical interface: ge-0/0/0, Enabled, Physical link is Up\n"
+      }.freeze
 
       private
 
@@ -312,20 +339,12 @@ module TrainPlugins
 
       # Build SSH connection options from @options
       def build_ssh_options
-        {
-          port: @options[:port],
-          password: @options[:password],
-          timeout: @options[:timeout],
-          verify_host_key: :never,
-          keepalive: @options[:keepalive],
-          keepalive_interval: @options[:keepalive_interval]
-        }.tap do |opts|
-          # Add SSH key authentication if specified
-          if @options[:key_files]
-            opts[:keys] = Array(@options[:key_files])
-            opts[:keys_only] = @options[:keys_only]
+        SSH_DEFAULTS.merge(
+          SSH_OPTION_MAPPING.each_with_object({}) do |(ssh_key, option_key), opts|
+            value = option_key.is_a?(Proc) ? option_key.call(@options) : @options[option_key]
+            opts[ssh_key] = value unless value.nil?
           end
-        end
+        )
       end
 
       # Validate proxy configuration options (Train standard)
@@ -382,19 +401,11 @@ module TrainPlugins
 
       # Mock command execution for testing
       def mock_command_result(cmd)
-        case cmd
-        when /show version/
-          CommandResult.new(mock_show_version_output, '', 0)
-        when /show chassis hardware/
-          CommandResult.new(mock_chassis_output, '', 0)
-        when /show configuration/
-          CommandResult.new("interfaces {\n    ge-0/0/0 {\n        unit 0;\n    }\n}", '', 0)
-        when /show route/
-          CommandResult.new("inet.0: 5 destinations, 5 routes\n0.0.0.0/0       *[Static/5] 00:00:01\n", '', 0)
-        when /show system information/
-          CommandResult.new("Hardware: SRX240H2\nOS: JUNOS 12.1X47-D15.4\n", '', 0)
-        when /show interfaces/
-          CommandResult.new("Physical interface: ge-0/0/0, Enabled, Physical link is Up\n", '', 0)
+        response = MOCK_RESPONSES.find { |pattern, _| cmd.match?(/#{pattern}/) }
+
+        if response
+          output = response[1].is_a?(Symbol) ? send(response[1]) : response[1]
+          CommandResult.new(output, '', 0)
         else
           CommandResult.new("% Unknown command: #{cmd}", '', 1)
         end

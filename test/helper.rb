@@ -24,3 +24,45 @@ require 'minitest/spec'
 # Load the Train gem and our plugin
 require 'train'
 require 'train-juniper'
+
+# Test helper module for common test utilities
+module JuniperTestHelpers
+  JUNIPER_ENV_VARS = %w[
+    JUNIPER_HOST JUNIPER_USER JUNIPER_PASSWORD JUNIPER_PORT
+    JUNIPER_BASTION_HOST JUNIPER_BASTION_USER JUNIPER_BASTION_PORT
+    JUNIPER_BASTION_PASSWORD JUNIPER_PROXY_COMMAND JUNIPER_TIMEOUT
+  ].freeze
+
+  def clean_juniper_env
+    JUNIPER_ENV_VARS.each { |var| ENV.delete(var) }
+  end
+
+  def with_clean_env
+    clean_juniper_env
+    yield
+  ensure
+    clean_juniper_env
+  end
+
+  def default_mock_options(overrides = {})
+    {
+      host: 'test.device',
+      user: 'testuser',
+      password: 'testpass',
+      mock: true
+    }.merge(overrides)
+  end
+
+  def bastion_mock_options(overrides = {})
+    default_mock_options({
+      bastion_host: 'jump.example.com',
+      bastion_user: 'netadmin',
+      bastion_port: 2222
+    }.merge(overrides))
+  end
+end
+
+# Include helper methods in all test classes
+class Minitest::Test
+  include JuniperTestHelpers
+end

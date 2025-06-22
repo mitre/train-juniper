@@ -7,18 +7,14 @@ require_relative '../helper'
 describe 'Error Handling and Edge Cases' do
   # Clean environment before each test to prevent pollution from other test files
   before do
-    %w[JUNIPER_HOST JUNIPER_USER JUNIPER_PASSWORD JUNIPER_PORT
-       JUNIPER_BASTION_HOST JUNIPER_BASTION_USER JUNIPER_BASTION_PORT
-       JUNIPER_PROXY_COMMAND].each { |var| ENV.delete(var) }
+    clean_juniper_env
   end
 
   after do
-    %w[JUNIPER_HOST JUNIPER_USER JUNIPER_PASSWORD JUNIPER_PORT
-       JUNIPER_BASTION_HOST JUNIPER_BASTION_USER JUNIPER_BASTION_PORT
-       JUNIPER_PROXY_COMMAND].each { |var| ENV.delete(var) }
+    clean_juniper_env
   end
 
-  let(:mock_options) { { host: 'test.device', user: 'admin', mock: true } }
+  let(:mock_options) { default_mock_options(user: 'admin') }
   let(:connection_class) { TrainPlugins::Juniper::Connection }
 
   describe 'command result processing' do
@@ -84,24 +80,22 @@ describe 'Error Handling and Edge Cases' do
     end
 
     it 'should allow bastion_host without proxy_command' do
-      valid_options = {
+      valid_options = bastion_mock_options(
         host: 'device.com',
         user: 'admin',
-        bastion_host: 'jump.host',
-        mock: true
-      }
+        bastion_host: 'jump.host'
+      )
 
       connection = connection_class.new(valid_options)
       _(connection).must_be_instance_of(connection_class)
     end
 
     it 'should allow proxy_command without bastion_host' do
-      valid_options = {
+      valid_options = default_mock_options(
         host: 'device.com',
         user: 'admin',
-        proxy_command: 'ssh proxy -W %h:%p',
-        mock: true
-      }
+        proxy_command: 'ssh proxy -W %h:%p'
+      )
 
       connection = connection_class.new(valid_options)
       _(connection).must_be_instance_of(connection_class)

@@ -14,7 +14,7 @@ require 'train-juniper/connection'
 describe TrainPlugins::Juniper::Connection do
   # Test helper variables
   let(:connection_class) { TrainPlugins::Juniper::Connection }
-  let(:mock_options) { { host: 'test-router', user: 'admin', password: 'secret', mock: true } }
+  let(:mock_options) { default_mock_options(host: 'test-router', user: 'admin', password: 'secret') }
 
   it 'should inherit from the Train Connection base' do
     # Verify proper inheritance from BaseConnection
@@ -104,17 +104,11 @@ describe TrainPlugins::Juniper::Connection do
 
   describe 'environment variable support' do
     before do
-      # Clean environment before each test
-      %w[JUNIPER_HOST JUNIPER_USER JUNIPER_PASSWORD JUNIPER_PORT
-         JUNIPER_BASTION_HOST JUNIPER_BASTION_USER JUNIPER_BASTION_PORT
-         JUNIPER_PROXY_COMMAND].each { |var| ENV.delete(var) }
+      clean_juniper_env
     end
 
     after do
-      # Clean environment after each test
-      %w[JUNIPER_HOST JUNIPER_USER JUNIPER_PASSWORD JUNIPER_PORT
-         JUNIPER_BASTION_HOST JUNIPER_BASTION_USER JUNIPER_BASTION_PORT
-         JUNIPER_PROXY_COMMAND].each { |var| ENV.delete(var) }
+      clean_juniper_env
     end
 
     it 'should use environment variables for basic connection' do

@@ -5,14 +5,7 @@
 require_relative '../helper'
 
 describe 'Security Tests' do
-  let(:connection_options) do
-    {
-      host: 'test.device',
-      user: 'testuser',
-      password: 'testpass',
-      mock: true
-    }
-  end
+  let(:connection_options) { default_mock_options() }
 
   let(:connection) { TrainPlugins::Juniper::Connection.new(connection_options) }
 
@@ -38,11 +31,11 @@ describe 'Security Tests' do
     end
 
     it 'should support environment variable configuration' do
-      ENV['JUNIPER_HOST'] = 'env.test.com'
-      ENV['JUNIPER_USER'] = 'envuser'
-      ENV['JUNIPER_PASSWORD'] = 'envpass'
+      with_clean_env do
+        ENV['JUNIPER_HOST'] = 'env.test.com'
+        ENV['JUNIPER_USER'] = 'envuser'
+        ENV['JUNIPER_PASSWORD'] = 'envpass'
 
-      begin
         env_connection = TrainPlugins::Juniper::Connection.new(mock: true)
 
         # Should use environment variables
@@ -51,10 +44,6 @@ describe 'Security Tests' do
 
         # Should not expose password in string representation
         _(env_connection.to_s).wont_include('envpass')
-      ensure
-        ENV.delete('JUNIPER_HOST')
-        ENV.delete('JUNIPER_USER')
-        ENV.delete('JUNIPER_PASSWORD')
       end
     end
   end
@@ -164,24 +153,20 @@ describe 'Security Tests' do
 
     it 'should handle proxy option validation without errors' do
       # Test valid bastion configuration
-      bastion_options = connection_options.merge({
-                                                   bastion_host: 'bastion.example.com',
-                                                   bastion_user: 'bastionuser',
-                                                   bastion_port: 2222
-                                                 })
+      bastion_options = bastion_mock_options(
+        bastion_host: 'bastion.example.com',
+        bastion_user: 'bastionuser',
+        bastion_port: 2222
+      )
 
       test_connection = TrainPlugins::Juniper::Connection.new(bastion_options)
       _(test_connection).wont_be_nil
     end
 
     it 'should handle proxy command configuration' do
-      proxy_options = {
-        host: 'test.device',
-        user: 'testuser',
-        password: 'testpass',
-        mock: true,
+      proxy_options = default_mock_options(
         proxy_command: 'ssh -W %h:%p custom-proxy.example.com'
-      }
+      )
 
       test_connection = TrainPlugins::Juniper::Connection.new(proxy_options)
       _(test_connection).wont_be_nil
