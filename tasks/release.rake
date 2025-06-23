@@ -62,8 +62,11 @@ namespace :release do # rubocop:disable Metrics/BlockLength
     # Create release notes
     create_release_notes(new_version)
 
+    # Update mkdocs.yml to include new release notes
+    update_mkdocs_nav(new_version)
+
     # Commit changes
-    system("git add lib/train-juniper/version.rb Gemfile.lock CHANGELOG.md docs/release-notes/v#{new_version}.md")
+    system("git add lib/train-juniper/version.rb Gemfile.lock CHANGELOG.md docs/release-notes/v#{new_version}.md mkdocs.yml")
     system("git commit -m 'Bump version to #{new_version}'") or abort('Failed to commit changes')
 
     puts "\n🎉 Release #{new_version} prepared!"
@@ -159,6 +162,25 @@ namespace :release do # rubocop:disable Metrics/BlockLength
 
   def current_version
     File.read('lib/train-juniper/version.rb')[/VERSION = ['"](.+)['"]/, 1]
+  end
+
+  def update_mkdocs_nav(version)
+    mkdocs_file = 'mkdocs.yml'
+    content = File.read(mkdocs_file)
+    
+    # Find the Release Notes section and add the new version at the top
+    if content =~ /(\s+- Release Notes:\n)/
+      indent = $1.match(/(\s+)/)[1] + '  '
+      new_entry = "#{indent}- v#{version}: release-notes/v#{version}.md\n"
+      
+      # Insert after "- Release Notes:" line
+      content.sub!(/(\s+- Release Notes:\n)/, "\\1#{new_entry}")
+      
+      File.write(mkdocs_file, content)
+      puts "✓ Updated mkdocs.yml with v#{version} release notes"
+    else
+      puts "⚠️  Could not find Release Notes section in mkdocs.yml"
+    end
   end
 end
 
