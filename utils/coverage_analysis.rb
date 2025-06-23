@@ -51,10 +51,10 @@ def process_coverage_files(coverage_data)
     next unless line_data.is_a?(Hash) && line_data['lines']
 
     lines = line_data['lines']
-    
+
     # Read the file to check for :nocov: markers
     nocov_ranges = find_nocov_ranges(file)
-    
+
     # Filter out lines within :nocov: blocks
     processed_lines = lines.each_with_index.map do |line, index|
       if line && nocov_ranges.any? { |range| range.include?(index + 1) }
@@ -63,7 +63,7 @@ def process_coverage_files(coverage_data)
         line
       end
     end
-    
+
     covered = processed_lines.compact.count { |n| n&.positive? }
     total = processed_lines.compact.count
     percentage = total.positive? ? (covered.to_f / total * 100).round(2) : 0
@@ -82,13 +82,13 @@ end
 def find_nocov_ranges(file_path)
   ranges = []
   return ranges unless File.exist?(file_path)
-  
+
   in_nocov = false
   start_line = nil
-  
+
   File.readlines(file_path).each_with_index do |line, index|
     line_num = index + 1
-    
+
     if line =~ /\#\s*:nocov:/
       if in_nocov
         # End of nocov block
@@ -102,12 +102,10 @@ def find_nocov_ranges(file_path)
       end
     end
   end
-  
+
   # Handle unclosed nocov block
-  if in_nocov && start_line
-    ranges << (start_line..Float::INFINITY)
-  end
-  
+  ranges << (start_line..Float::INFINITY) if in_nocov && start_line
+
   ranges
 end
 
@@ -346,73 +344,90 @@ def format_json_output(stats)
 end
 
 def format_markdown_output(stats)
-  files = stats[:files]
-  overall = stats[:overall]
-  total_lines = stats[:total_lines]
-  total_covered = stats[:total_covered]
-  incomplete_files = stats[:incomplete_files]
-  complete_files = stats[:complete_files]
-  impact_files = stats[:impact_files]
   output = []
 
-  output << '---'
-  output << 'title: Coverage Report'
-  output << 'description: Code coverage analysis for train-juniper'
-  output << '---'
-  output << ''
-  output << '# Coverage Analysis'
-  output << ''
-  output << "!!! info \"Report Generated\""
-  output << "    #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
-  output << ''
-  output << '## :material-chart-line: Overall Statistics'
-  output << ''
-  output << '<div class="grid cards" markdown>'
-  output << ''
-  output << '- :material-percent: __Overall Coverage__'
-  output << ''
-  output << "    ---"
-  output << ''
-  output << "    ### **#{overall}%**"
-  output << ''
-  output << '- :material-file-document-multiple: __Code Metrics__'
-  output << ''
-  output << "    ---"
-  output << ''
-  output << "    - Total Lines: **#{total_lines}**"
-  output << "    - Covered Lines: **#{total_covered}**"
-  output << "    - Files Analyzed: **#{files.count}**"
-  output << ''
-  output << '- :material-check-all: __Coverage Status__'
-  output << ''
-  output << "    ---"
-  output << ''
-  output << "    - Files with 100%: **#{complete_files.count}**"
-  output << "    - Files Needing Work: **#{incomplete_files.count}**"
-  output << ''
-  output << '</div>'
+  output.concat(format_markdown_header)
+  output.concat(format_markdown_statistics(stats))
+  output.concat(format_markdown_incomplete_section(stats[:incomplete_files]))
+  output.concat(format_markdown_complete_section(stats[:complete_files]))
+  output.concat(format_markdown_recommendations(stats[:impact_files]))
+  output.concat(format_markdown_assessment(stats[:overall]))
 
-  output.concat(format_markdown_incomplete_section(incomplete_files))
-  output.concat(format_markdown_complete_section(complete_files))
+  output.join("\n")
+end
 
-  if impact_files.any?
-    output << ''
-    output << '## :material-target: Recommendations'
-    output << ''
-    output << '!!! tip "Focus Areas"'
-    output << '    Focus on these files for maximum coverage improvement:'
-    output << ''
-    impact_files.each_with_index do |(file, data), i|
-      uncovered = data[:total] - data[:covered]
-      output << "    #{i + 1}. **`#{file}`** - #{uncovered} uncovered lines (currently #{data[:percentage]}%)"
-      output << "        - Lines to cover: `#{data[:uncovered].join(', ')}`"
-    end
+def format_markdown_header
+  [
+    '---',
+    'title: Coverage Report',
+    'description: Code coverage analysis for train-juniper',
+    '---',
+    '',
+    '# Coverage Analysis',
+    '',
+    '!!! info "Report Generated"',
+    "    #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}",
+    ''
+  ]
+end
+
+def format_markdown_statistics(stats)
+  [
+    '## :material-chart-line: Overall Statistics',
+    '',
+    '<div class="grid cards" markdown>',
+    '',
+    '- :material-percent: __Overall Coverage__',
+    '',
+    '    ---',
+    '',
+    "    ### **#{stats[:overall]}%**",
+    '',
+    '- :material-file-document-multiple: __Code Metrics__',
+    '',
+    '    ---',
+    '',
+    "    - Total Lines: **#{stats[:total_lines]}**",
+    "    - Covered Lines: **#{stats[:total_covered]}**",
+    "    - Files Analyzed: **#{stats[:files].count}**",
+    '',
+    '- :material-check-all: __Coverage Status__',
+    '',
+    '    ---',
+    '',
+    "    - Files with 100%: **#{stats[:complete_files].count}**",
+    "    - Files Needing Work: **#{stats[:incomplete_files].count}**",
+    '',
+    '</div>'
+  ]
+end
+
+def format_markdown_recommendations(impact_files)
+  return [] unless impact_files.any?
+
+  output = []
+  output << ''
+  output << '## :material-target: Recommendations'
+  output << ''
+  output << '!!! tip "Focus Areas"'
+  output << '    Focus on these files for maximum coverage improvement:'
+  output << ''
+
+  impact_files.each_with_index do |(file, data), i|
+    uncovered = data[:total] - data[:covered]
+    output << "    #{i + 1}. **`#{file}`** - #{uncovered} uncovered lines (currently #{data[:percentage]}%)"
+    output << "        - Lines to cover: `#{data[:uncovered].join(', ')}`"
   end
 
+  output
+end
+
+def format_markdown_assessment(overall)
+  output = []
   output << ''
   output << '## :material-shield-check: Coverage Assessment'
   output << ''
-  
+
   if overall == 100
     output << '!!! success "Perfect Coverage!"'
     output << '    **100% code coverage achieved!** All code paths are tested.'
@@ -427,7 +442,7 @@ def format_markdown_output(stats)
     output << '    **Coverage below 80% industry standard** - More tests needed.'
   end
 
-  output.join("\n")
+  output
 end
 
 # Run the analysis
