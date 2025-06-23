@@ -125,6 +125,8 @@ module TrainPlugins
         "#<#{self.class.name}:0x#{object_id.to_s(16)} @host=#{@options[:host]} @user=#{@options[:user]}>"
       end
 
+      # Secure inspect method that uses to_s
+      # @return [String] Secure string representation
       def inspect
         to_s
       end
