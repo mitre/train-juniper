@@ -397,6 +397,25 @@ This plugin implements the Train Plugin V1 API with:
 - **Platform** (`lib/train-juniper/platform.rb`) - JunOS platform detection
 - **Version** (`lib/train-juniper/version.rb`) - Plugin version management
 
+### Platform Support
+
+This gem supports a wide range of platforms to ensure maximum compatibility:
+
+| Platform | Description | Use Case |
+|----------|-------------|----------|
+| `ruby` | Platform-independent | Pure Ruby installations |
+| `x86_64-linux` | Standard Linux | Most Linux servers and CI/CD |
+| `aarch64-linux` | ARM64 Linux | AWS Graviton, Raspberry Pi |
+| `x86_64-linux-musl` | Alpine Linux | Docker containers |
+| `x86_64-darwin` | Intel macOS | Older Mac workstations |
+| `arm64-darwin-*` | Apple Silicon macOS | Modern Mac workstations |
+| `x64-mingw-ucrt` | Windows (UCRT) | Windows 10/11 with modern Ruby |
+| `x86_64-freebsd` | FreeBSD | Network appliances (JunOS heritage) |
+| `x86_64-solaris` | Solaris/illumos | Enterprise environments |
+
+!!! note "Platform Compatibility"
+    This comprehensive platform support ensures the plugin works wherever InSpec runs, from developer workstations to CI/CD pipelines to production jump hosts. The FreeBSD support is particularly relevant given that JunOS is based on FreeBSD.
+
 ### Documentation
 
 - **[Installation Guide](installation)** - Complete installation instructions
