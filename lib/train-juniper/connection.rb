@@ -16,6 +16,10 @@ require 'logger'
 
 # Juniper-specific platform detection
 require 'train-juniper/platform'
+require 'train-juniper/mock_responses'
+require 'train-juniper/juniper_file'
+require 'train-juniper/environment_helpers'
+require 'train-juniper/validation'
 
 # Using Train's SSH transport for connectivity
 
@@ -25,6 +29,10 @@ module TrainPlugins
     class Connection < Train::Plugins::Transport::BaseConnection
       # Include Juniper-specific platform detection
       include TrainPlugins::Juniper::Platform
+      # Include environment variable helpers
+      include TrainPlugins::Juniper::EnvironmentHelpers
+      # Include validation methods
+      include TrainPlugins::Juniper::Validation
 
       attr_reader :ssh_session
 
@@ -200,16 +208,6 @@ module TrainPlugins
         verify_host_key: :never
       }.freeze
 
-      # Mock response configuration
-      MOCK_RESPONSES = {
-        'show version' => :mock_show_version_output,
-        'show chassis hardware' => :mock_chassis_output,
-        'show configuration' => "interfaces {\n    ge-0/0/0 {\n        unit 0;\n    }\n}",
-        'show route' => "inet.0: 5 destinations, 5 routes\n0.0.0.0/0       *[Static/5] 00:00:01\n",
-        'show system information' => "Hardware: SRX240H2\nOS: JUNOS 12.1X47-D15.4\n",
-        'show interfaces' => "Physical interface: ge-0/0/0, Enabled, Physical link is Up\n"
-      }.freeze
-
       # Command sanitization patterns
       # Note: Pipe (|) is allowed as it's commonly used in JunOS commands
       DANGEROUS_COMMAND_PATTERNS = [
@@ -271,32 +269,7 @@ module TrainPlugins
           ssh_options = build_ssh_options
 
           # Add bastion host support if configured
-          if @options[:bastion_host]
-            require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
-
-            # Build proxy jump string from bastion options
-            bastion_user = @options[:bastion_user] || @options[:user] # Use explicit bastion user or fallback to main user
-            bastion_port = @options[:bastion_port]
-
-            proxy_jump = if bastion_port == 22
-                           "#{bastion_user}@#{@options[:bastion_host]}"
-                         else
-                           "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
-                         end
-
-            @logger.debug("Using bastion host: #{proxy_jump}")
-
-            # Set up automated password authentication via SSH_ASKPASS
-            bastion_password = @options[:bastion_password] || @options[:password] # Use explicit bastion password or fallback
-            if bastion_password
-              @ssh_askpass_script = create_ssh_askpass_script(bastion_password)
-              ENV['SSH_ASKPASS'] = @ssh_askpass_script
-              ENV['SSH_ASKPASS_REQUIRE'] = 'force' # Force use of SSH_ASKPASS even with terminal
-              @logger.debug('Configured SSH_ASKPASS for automated bastion authentication')
-            end
-
-            ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
-          end
+          configure_bastion_proxy(ssh_options) if @options[:bastion_host]
 
           @logger.debug("Connecting to #{@options[:host]}:#{@options[:port]} as #{@options[:user]}")
 
@@ -307,30 +280,7 @@ module TrainPlugins
           # Configure JunOS session for automation
           test_and_configure_session
         rescue StandardError => e
-          @logger.error("SSH connection failed: #{e.message}")
-
-          # Provide helpful error messages for common authentication issues
-          if (e.message.include?('Permission denied') || e.message.include?('command failed')) && @options[:bastion_host]
-            raise Train::TransportError, <<~ERROR
-              Failed to connect to Juniper device #{@options[:host]} via bastion #{@options[:bastion_host]}: #{e.message}
-
-              SSH bastion authentication with passwords is not supported due to ProxyCommand limitations.
-              Please use one of these alternatives:
-
-              1. SSH Key Authentication (Recommended):
-                 Use --key-files option to specify SSH private key files
-              #{'   '}
-              2. SSH Agent:
-                 Ensure your SSH agent has the required keys loaded
-              #{'   '}
-              3. Direct Connection:
-                 Connect directly to the device if network allows (remove bastion options)
-
-              For more details, see: https://mitre.github.io/train-juniper/troubleshooting/#bastion-authentication
-            ERROR
-          else
-            raise Train::TransportError, "Failed to connect to Juniper device #{@options[:host]}: #{e.message}"
-          end
+          handle_connection_error(e)
         end
       end
 
@@ -346,6 +296,76 @@ module TrainPlugins
       # Check if running in mock mode
       def mock?
         @options[:mock] == true
+      end
+
+      # Configure bastion proxy for SSH connection
+      def configure_bastion_proxy(ssh_options)
+        require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
+
+        # Build proxy jump string from bastion options
+        bastion_user = @options[:bastion_user] || @options[:user]
+        bastion_port = @options[:bastion_port]
+
+        proxy_jump = if bastion_port == 22
+                       "#{bastion_user}@#{@options[:bastion_host]}"
+                     else
+                       "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
+                     end
+
+        @logger.debug("Using bastion host: #{proxy_jump}")
+
+        # Set up automated password authentication via SSH_ASKPASS
+        setup_bastion_password_auth
+
+        ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
+      end
+
+      # Set up SSH_ASKPASS for bastion password authentication
+      def setup_bastion_password_auth
+        bastion_password = @options[:bastion_password] || @options[:password]
+        return unless bastion_password
+
+        @ssh_askpass_script = create_ssh_askpass_script(bastion_password)
+        ENV['SSH_ASKPASS'] = @ssh_askpass_script
+        ENV['SSH_ASKPASS_REQUIRE'] = 'force'
+        @logger.debug('Configured SSH_ASKPASS for automated bastion authentication')
+      end
+
+      # Handle connection errors with helpful messages
+      def handle_connection_error(error)
+        @logger.error("SSH connection failed: #{error.message}")
+
+        if bastion_auth_error?(error)
+          raise Train::TransportError, bastion_error_message(error)
+        else
+          raise Train::TransportError, "Failed to connect to Juniper device #{@options[:host]}: #{error.message}"
+        end
+      end
+
+      # Check if error is bastion authentication related
+      def bastion_auth_error?(error)
+        @options[:bastion_host] &&
+          (error.message.include?('Permission denied') || error.message.include?('command failed'))
+      end
+
+      # Build helpful bastion error message
+      def bastion_error_message(error)
+        <<~ERROR
+          Failed to connect to Juniper device #{@options[:host]} via bastion #{@options[:bastion_host]}: #{error.message}
+
+          Possible causes:
+          1. Incorrect bastion credentials (user: #{@options[:bastion_user] || @options[:user]})
+          2. Network connectivity issues to bastion host
+          3. Bastion host SSH service not available on port #{@options[:bastion_port]}
+          4. Target device not reachable from bastion
+
+          Authentication options:
+          - Password: Use --bastion-password (or JUNIPER_BASTION_PASSWORD env var)
+          - SSH Key: Use --key-files option to specify SSH private key files
+          - SSH Agent: Ensure your SSH agent has the required keys loaded
+
+          For more details, see: https://mitre.github.io/train-juniper/troubleshooting/#bastion-authentication
+        ERROR
       end
 
       # Test connection and configure JunOS session
@@ -396,26 +416,6 @@ module TrainPlugins
         lines.join("\n")
       end
 
-      # Helper method to safely get environment variable value
-      # Returns nil if env var is not set or is empty string
-      def env_value(key)
-        value = ENV.fetch(key, nil)
-        return nil if value.nil? || value.empty?
-
-        value
-      end
-
-      # Helper method to get environment variable as integer
-      # Returns nil if env var is not set, empty, or not a valid integer
-      def env_int(key)
-        value = env_value(key)
-        return nil unless value
-
-        value.to_i
-      rescue ArgumentError
-        nil
-      end
-
       # Build SSH connection options from @options
       def build_ssh_options
         SSH_DEFAULTS.merge(
@@ -424,52 +424,6 @@ module TrainPlugins
             opts[ssh_key] = value unless value.nil?
           end
         )
-      end
-
-      # Validate all connection options
-      def validate_connection_options!
-        validate_required_options!
-        validate_option_types!
-        validate_proxy_options!
-      end
-
-      # Validate required options are present
-      def validate_required_options!
-        raise Train::ClientError, 'Host is required' unless @options[:host]
-        raise Train::ClientError, 'User is required' unless @options[:user]
-      end
-
-      # Validate option types and ranges
-      def validate_option_types!
-        validate_port! if @options[:port]
-        validate_timeout! if @options[:timeout]
-        validate_bastion_port! if @options[:bastion_port]
-      end
-
-      # Validate port is in valid range
-      def validate_port!
-        port = @options[:port].to_i
-        raise Train::ClientError, "Invalid port: #{@options[:port]} (must be 1-65535)" unless port.between?(1, 65_535)
-      end
-
-      # Validate timeout is positive number
-      def validate_timeout!
-        timeout = @options[:timeout]
-        raise Train::ClientError, "Invalid timeout: #{timeout} (must be positive number)" unless timeout.is_a?(Numeric) && timeout.positive?
-      end
-
-      # Validate bastion port is in valid range
-      def validate_bastion_port!
-        port = @options[:bastion_port].to_i
-        raise Train::ClientError, "Invalid bastion_port: #{@options[:bastion_port]} (must be 1-65535)" unless port.between?(1, 65_535)
-      end
-
-      # Validate proxy configuration options (Train standard)
-      def validate_proxy_options!
-        # Cannot use both bastion_host and proxy_command simultaneously
-        if @options[:bastion_host] && @options[:proxy_command]
-          raise Train::ClientError, 'Cannot specify both bastion_host and proxy_command'
-        end
       end
 
       # Create temporary SSH_ASKPASS script for automated password authentication
@@ -518,75 +472,8 @@ module TrainPlugins
 
       # Mock command execution for testing
       def mock_command_result(cmd)
-        response = MOCK_RESPONSES.find { |pattern, _| cmd.match?(/#{pattern}/) }
-
-        if response
-          output = response[1].is_a?(Symbol) ? send(response[1]) : response[1]
-          CommandResult.new(output, '', 0)
-        else
-          CommandResult.new("% Unknown command: #{cmd}", '', 1)
-        end
-      end
-
-      # Mock JunOS version output for testing
-      def mock_show_version_output
-        <<~OUTPUT
-          Hostname: lab-srx
-          Model: SRX240H2
-          Junos: 12.1X47-D15.4
-          JUNOS Software Release [12.1X47-D15.4]
-        OUTPUT
-      end
-
-      # Mock chassis output for testing
-      def mock_chassis_output
-        <<~OUTPUT
-          Hardware inventory:
-          Item             Version  Part number  Serial number     Description
-          Chassis                                JN123456          SRX240H2
-        OUTPUT
-      end
-    end
-
-    # File abstraction for Juniper configuration and operational data
-    class JuniperFile
-      # Initialize a new JuniperFile
-      # @param connection [Connection] The Juniper connection instance
-      # @param path [String] The virtual file path
-      def initialize(connection, path)
-        @connection = connection
-        @path = path
-      end
-
-      # Get the content of the virtual file
-      # @return [String] The command output based on the path
-      # @example
-      #   file = connection.file('/config/interfaces')
-      #   file.content  # Returns output of 'show configuration interfaces'
-      def content
-        # For Juniper devices, translate file paths to appropriate commands
-        case @path
-        when %r{/config/(.*)}
-          # Configuration sections: /config/interfaces -> show configuration interfaces
-          section = ::Regexp.last_match(1)
-          result = @connection.run_command("show configuration #{section}")
-          result.stdout
-        when %r{/operational/(.*)}
-          # Operational data: /operational/interfaces -> show interfaces
-          section = ::Regexp.last_match(1)
-          result = @connection.run_command("show #{section}")
-          result.stdout
-        else
-          # Default to treating path as a show command
-          result = @connection.run_command("show #{@path}")
-          result.stdout
-        end
-      end
-
-      def exist?
-        !content.empty?
-      rescue StandardError
-        false
+        output, exit_status = MockResponses.response_for(cmd)
+        CommandResult.new(output, '', exit_status)
       end
     end
   end
