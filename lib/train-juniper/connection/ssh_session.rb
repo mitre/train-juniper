@@ -35,13 +35,17 @@ module TrainPlugins
           ssh_options = build_ssh_options
 
           # Add bastion host support if configured
-          configure_bastion_proxy(ssh_options) if @options[:bastion_host]
+          if @options[:bastion_host]
+            log_bastion_connection(@options[:bastion_host])
+            configure_bastion_proxy(ssh_options)
+          end
 
-          @logger.debug("Connecting to #{@options[:host]}:#{@options[:port]} as #{@options[:user]}")
+          log_connection_attempt(@options[:host], @options[:port])
+          log_ssh_options(ssh_options)
 
           # Direct SSH connection
           @ssh_session = Net::SSH.start(@options[:host], @options[:user], ssh_options)
-          @logger.debug('SSH connection established successfully')
+          log_connection_success(@options[:host])
 
           # Configure JunOS session for automation
           test_and_configure_session

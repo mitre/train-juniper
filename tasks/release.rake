@@ -167,19 +167,19 @@ namespace :release do # rubocop:disable Metrics/BlockLength
   def update_mkdocs_nav(version)
     mkdocs_file = 'mkdocs.yml'
     content = File.read(mkdocs_file)
-    
+
     # Find the Release Notes section and add the new version at the top
     if content =~ /(\s+- Release Notes:\n)/
-      indent = $1.match(/(\s+)/)[1] + '  '
+      indent = "#{Regexp.last_match(1).match(/(\s+)/)[1]}  "
       new_entry = "#{indent}- v#{version}: release-notes/v#{version}.md\n"
-      
+
       # Insert after "- Release Notes:" line
       content.sub!(/(\s+- Release Notes:\n)/, "\\1#{new_entry}")
-      
+
       File.write(mkdocs_file, content)
       puts "✓ Updated mkdocs.yml with v#{version} release notes"
     else
-      puts "⚠️  Could not find Release Notes section in mkdocs.yml"
+      puts '⚠️  Could not find Release Notes section in mkdocs.yml'
     end
   end
 end
@@ -195,25 +195,23 @@ task :release do
   # Get current version
   version = File.read('lib/train-juniper/version.rb')[/VERSION = ['"](.+)['"]/, 1]
   tag = "v#{version}"
-  
+
   # Check if tag already exists
   existing_tags = `git tag -l #{tag}`.strip
-  unless existing_tags.empty?
-    abort "Tag #{tag} already exists. Did you forget to bump the version?"
-  end
-  
+  abort "Tag #{tag} already exists. Did you forget to bump the version?" unless existing_tags.empty?
+
   # Create and push tag
   system("git tag #{tag}") or abort("Failed to create tag #{tag}")
   system("git push origin #{tag}") or abort("Failed to push tag #{tag}")
-  
+
   puts "✅ Tagged #{tag}"
-  puts "✅ Pushed tag to GitHub"
-  puts ""
-  puts "🚀 GitHub Actions will now:"
-  puts "   - Run all tests"
-  puts "   - Run security audits"  
-  puts "   - Create GitHub Release"
-  puts "   - Publish gem to RubyGems.org"
-  puts ""
-  puts "📦 Monitor the release at: https://github.com/mitre/train-juniper/actions"
+  puts '✅ Pushed tag to GitHub'
+  puts ''
+  puts '🚀 GitHub Actions will now:'
+  puts '   - Run all tests'
+  puts '   - Run security audits'
+  puts '   - Create GitHub Release'
+  puts '   - Publish gem to RubyGems.org'
+  puts ''
+  puts '📦 Monitor the release at: https://github.com/mitre/train-juniper/actions'
 end

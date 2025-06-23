@@ -29,7 +29,7 @@ module TrainPlugins
           # Ensure we're connected
           connect unless connected?
 
-          @logger.debug("Executing command: #{safe_cmd}")
+          log_command(safe_cmd)
 
           # Execute command via SSH session
           output = @ssh_session.exec!(safe_cmd)
@@ -39,9 +39,9 @@ module TrainPlugins
           # Format JunOS result
           format_junos_result(output, safe_cmd)
         rescue StandardError => e
-          @logger.error("Command execution failed: #{e.message}")
+          log_error(e, 'Command execution failed')
           # Handle connection errors gracefully
-          Train::Extras::CommandResult.new('', e.message, 1)
+          error_result(e.message)
         end
       end
 
@@ -62,9 +62,9 @@ module TrainPlugins
       def format_junos_result(output, cmd)
         # Parse JunOS-specific error patterns
         if junos_error?(output)
-          Train::Extras::CommandResult.new('', output, 1)
+          error_result(output)
         else
-          Train::Extras::CommandResult.new(clean_output(output, cmd), '', 0)
+          success_result(output, cmd)
         end
       end
 
@@ -86,7 +86,24 @@ module TrainPlugins
       # Mock command execution for testing
       def mock_command_result(cmd)
         output, exit_status = MockResponses.response_for(cmd)
+        # For mock mode, network devices return errors as stdout
         Train::Extras::CommandResult.new(output, '', exit_status)
+      end
+
+      # Factory method for successful command results
+      # @param output [String] Command output
+      # @param cmd [String, nil] Original command for cleaning output
+      # @return [Train::Extras::CommandResult] Successful result object
+      def success_result(output, cmd = nil)
+        output = clean_output(output, cmd) if cmd
+        Train::Extras::CommandResult.new(output, '', 0)
+      end
+
+      # Factory method for error command results
+      # @param message [String] Error message
+      # @return [Train::Extras::CommandResult] Error result object
+      def error_result(message)
+        Train::Extras::CommandResult.new('', message, 1)
       end
     end
   end

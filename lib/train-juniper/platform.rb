@@ -42,6 +42,9 @@ module TrainPlugins::Juniper
       platform_obj = force_platform!(PLATFORM_NAME, platform_details)
       logger&.debug("Set platform data: #{platform_obj.platform}")
 
+      # Log platform detection results if logging helpers available
+      log_platform_detection(PLATFORM_NAME, device_version) if respond_to?(:log_platform_detection)
+
       # Cache the platform object to prevent repeated calls
       @platform = platform_obj
     end

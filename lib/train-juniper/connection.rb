@@ -23,6 +23,7 @@ require 'train-juniper/connection/error_handling'
 require 'train-juniper/connection/ssh_session'
 require 'train-juniper/connection/bastion_proxy'
 require 'train-juniper/helpers/environment'
+require 'train-juniper/helpers/logging'
 require 'train-juniper/helpers/mock_responses'
 require 'train-juniper/file_abstraction/juniper_file'
 
@@ -46,6 +47,8 @@ module TrainPlugins
       include TrainPlugins::Juniper::SSHSession
       # Include bastion proxy support
       include TrainPlugins::Juniper::BastionProxy
+      # Include logging helpers
+      include TrainPlugins::Juniper::Logging
 
       # Alias for Train CommandResult for backward compatibility
       CommandResult = Train::Extras::CommandResult
@@ -117,8 +120,12 @@ module TrainPlugins
         super(@options)
 
         # Establish SSH connection to Juniper device (unless in mock mode or skip_connect)
-        @logger.debug('Attempting to connect to Juniper device...')
-        connect unless @options[:mock] || @options[:skip_connect]
+        if @options[:mock]
+          log_mock_mode
+        elsif !@options[:skip_connect]
+          @logger.debug('Attempting to connect to Juniper device...')
+          connect
+        end
       end
 
       # Secure string representation (never expose credentials)
