@@ -51,19 +51,64 @@ def process_coverage_files(coverage_data)
     next unless line_data.is_a?(Hash) && line_data['lines']
 
     lines = line_data['lines']
-    covered = lines.compact.count { |n| n&.positive? }
-    total = lines.compact.count
+    
+    # Read the file to check for :nocov: markers
+    nocov_ranges = find_nocov_ranges(file)
+    
+    # Filter out lines within :nocov: blocks
+    processed_lines = lines.each_with_index.map do |line, index|
+      if line && nocov_ranges.any? { |range| range.include?(index + 1) }
+        nil # Treat as not relevant for coverage
+      else
+        line
+      end
+    end
+    
+    covered = processed_lines.compact.count { |n| n&.positive? }
+    total = processed_lines.compact.count
     percentage = total.positive? ? (covered.to_f / total * 100).round(2) : 0
 
     files[file.split('/').last] = {
       covered: covered,
       total: total,
       percentage: percentage,
-      uncovered: lines.each_with_index.select { |n, _i| n.zero? }.map { |_, i| i + 1 },
+      uncovered: processed_lines.each_with_index.select { |n, _i| n && n.zero? }.map { |_, i| i + 1 },
       full_path: file
     }
   end
   files
+end
+
+def find_nocov_ranges(file_path)
+  ranges = []
+  return ranges unless File.exist?(file_path)
+  
+  in_nocov = false
+  start_line = nil
+  
+  File.readlines(file_path).each_with_index do |line, index|
+    line_num = index + 1
+    
+    if line =~ /\#\s*:nocov:/
+      if in_nocov
+        # End of nocov block
+        ranges << (start_line..line_num) if start_line
+        in_nocov = false
+        start_line = nil
+      else
+        # Start of nocov block
+        in_nocov = true
+        start_line = line_num
+      end
+    end
+  end
+  
+  # Handle unclosed nocov block
+  if in_nocov && start_line
+    ranges << (start_line..Float::INFINITY)
+  end
+  
+  ranges
 end
 
 def calculate_impact_files(incomplete_files, total_lines)

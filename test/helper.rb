@@ -10,6 +10,10 @@ require 'simplecov'
 SimpleCov.start do
   add_filter '/test/'
   add_filter '/vendor/'
+  
+  # Enable nocov comment blocks
+  enable_coverage :branch
+  nocov_token 'nocov'
 
   add_group 'Transport', 'lib/train-juniper/transport.rb'
   add_group 'Connection', 'lib/train-juniper/connection.rb'
