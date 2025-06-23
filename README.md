@@ -415,11 +415,17 @@ This plugin implements the Train Plugin V1 API with:
 
 ## Support and Contact
 
+### General Support
+
 For questions, feature requests, or general support:
+
 - Email: [saf@mitre.org](mailto:saf@mitre.org)
 - GitHub Issues: [https://github.com/mitre/train-juniper/issues](https://github.com/mitre/train-juniper/issues)
 
+### Security Issues
+
 For security issues or vulnerabilities:
+
 - Email: [saf-security@mitre.org](mailto:saf-security@mitre.org)
 - GitHub Security: [https://github.com/mitre/train-juniper/security](https://github.com/mitre/train-juniper/security)
 
