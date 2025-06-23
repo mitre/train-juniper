@@ -166,8 +166,61 @@ end
 - **Constants**: Use fully qualified names or create aliases
 - **Error Handling**: Modules can raise and rescue exceptions across boundaries
 
+### 23. Coverage Analysis Tools
+- **Create Reusable Scripts**: utils/coverage_analysis.rb pattern
+- **Multiple Output Formats**: Support human, JSON, markdown
+- **SimpleCov Integration**: Parse coverage/.last_run.json
+- **:nocov: Detection**: Properly handle excluded code blocks
+- **Actionable Output**: Provide specific file locations and recommendations
+
+### 24. Achieving 100% Test Coverage
+- **SimpleCov Configuration**: Enable nocov_token support
+  ```ruby
+  SimpleCov.start do
+    enable_coverage :branch
+    nocov_token 'nocov'
+  end
+  ```
+- **Marking Untestable Code**: Use :nocov: for real SSH connections
+- **Edge Case Testing**: Test early returns and guard clauses
+- **Coverage != Quality**: Focus on meaningful tests, not just numbers
+
+### 25. DRY Patterns for Plugins
+- **Command Result Factory**: Reduce duplication
+  ```ruby
+  def success_result(output, cmd = nil)
+    output = clean_output(output, cmd) if cmd
+    Train::Extras::CommandResult.new(output, '', 0)
+  end
+  ```
+- **Logging Helpers**: Consistent, secure logging
+- **Constants Module**: Centralize configuration values
+- **Helper Methods**: Extract repeated patterns
+
+### 26. Production Release Process
+- **Standard Conventions**: Build gems in pkg/ directory
+- **Coverage Integration**: Generate reports during release
+- **Automated Updates**: mkdocs.yml, CHANGELOG.md
+- **GitHub Actions**: Use OIDC for trusted publishing
+- **Documentation Links**: Remove .md extensions for MkDocs
+
+### 27. RuboCop Compliance Strategies
+- **Auto-Fix First**: Use `rubocop -a` for safe fixes
+- **Refactor Complex Methods**: Break down ABC complexity
+- **Extract Helper Methods**: Reduce method length
+- **Avoid Todos**: Fix all issues immediately
+- **Document Decisions**: Comment non-obvious style choices
+
+### 28. Material for MkDocs Integration
+- **Admonition Boxes**: Use !!! note, warning, info
+- **Empty Lines**: Required before bullet lists
+- **Subsection Structure**: Use ### for better hierarchy
+- **Code Annotations**: Add numbered annotations with .annotate
+- **Material Icons**: :material-star: for visual enhancement
+
 ## Topics for Future Development
 - Dependency injection patterns for testability
 - Performance considerations for modular vs monolithic code
 - Backward compatibility strategies during major refactoring
 - Testing strategies for modular plugin architectures
+- InSpec resource pack development patterns

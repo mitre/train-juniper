@@ -5,6 +5,17 @@ require 'train-juniper/connection'
 
 describe 'BastionProxy module' do
   let(:connection_class) { TrainPlugins::Juniper::Connection }
+  
+  # Helper to assert SSH_ASKPASS script path based on platform
+  def assert_ssh_askpass_script_created
+    askpass_path = ENV.fetch('SSH_ASKPASS', nil)
+    if Gem.win_platform?
+      _(askpass_path).must_match(/ssh_askpass.*\.bat$/)
+    else
+      _(askpass_path).must_match(%r{/ssh_askpass.*\.sh$})
+    end
+  end
+  
   let(:bastion_options) do
     default_mock_options(
       host: 'device.local',
@@ -27,7 +38,7 @@ describe 'BastionProxy module' do
       connection.send(:configure_bastion_proxy, ssh_options)
 
       _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Jump)
-      _(ENV.fetch('SSH_ASKPASS', nil)).must_match(%r{/ssh_askpass.*\.sh$})
+      assert_ssh_askpass_script_created
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
     end
 
@@ -39,7 +50,7 @@ describe 'BastionProxy module' do
       connection.send(:configure_bastion_proxy, ssh_options)
 
       _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Jump)
-      _(ENV.fetch('SSH_ASKPASS', nil)).must_match(%r{/ssh_askpass.*\.sh$})
+      assert_ssh_askpass_script_created
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
     end
 
@@ -54,7 +65,7 @@ describe 'BastionProxy module' do
       conn.send(:configure_bastion_proxy, ssh_options)
 
       _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Jump)
-      _(ENV.fetch('SSH_ASKPASS', nil)).must_match(%r{/ssh_askpass.*\.sh$})
+      assert_ssh_askpass_script_created
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
     end
   end
@@ -67,7 +78,7 @@ describe 'BastionProxy module' do
 
       connection.send(:setup_bastion_password_auth)
 
-      _(ENV.fetch('SSH_ASKPASS', nil)).must_match(%r{/ssh_askpass.*\.sh$})
+      assert_ssh_askpass_script_created
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
 
       # Clean up
@@ -86,7 +97,7 @@ describe 'BastionProxy module' do
 
       conn.send(:setup_bastion_password_auth)
 
-      _(ENV.fetch('SSH_ASKPASS', nil)).must_match(%r{/ssh_askpass.*\.sh$})
+      assert_ssh_askpass_script_created
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
 
       # Verify script contains device password
@@ -130,14 +141,42 @@ describe 'BastionProxy module' do
       script_path = connection.send(:create_ssh_askpass_script, 'test_pass')
 
       _(File.exist?(script_path)).must_equal(true)
-      _(File.executable?(script_path)).must_equal(true)
-
+      
       content = File.read(script_path)
-      _(content).must_include('#!/bin/bash')
-      _(content).must_include("echo 'test_pass'")
+      if Gem.win_platform?
+        _(script_path).must_match(/\.bat$/)
+        _(content).must_include('@echo off')
+        _(content).must_include('powershell.exe -ExecutionPolicy Bypass')
+        _(content).must_match(/\.ps1/)
+      else
+        _(File.executable?(script_path)).must_equal(true)
+        _(content).must_include('#!/bin/bash')
+        _(content).must_include("echo 'test_pass'")
+      end
 
       # Clean up
       FileUtils.rm_f(script_path)
+    end
+
+    it 'should escape single quotes on Windows PowerShell' do
+      skip 'Windows-specific test' unless Gem.win_platform?
+      
+      wrapper_path = connection.send(:create_ssh_askpass_script, "test'pass'word")
+      
+      # The wrapper should exist
+      _(File.exist?(wrapper_path)).must_equal(true)
+      
+      # Read wrapper to find PowerShell script path
+      wrapper_content = File.read(wrapper_path)
+      ps1_path = wrapper_content.match(/-File "([^"]+)"/)[1]
+      
+      # Check PowerShell script has escaped quotes
+      ps_content = File.read(ps1_path)
+      _(ps_content).must_include("test''pass''word")
+      
+      # Clean up
+      FileUtils.rm_f(wrapper_path)
+      FileUtils.rm_f(ps1_path)
     end
   end
 

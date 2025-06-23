@@ -15,10 +15,11 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         ruby-version: ['3.1', '3.2', '3.3']
+    runs-on: ${{ matrix.os }}
     
     steps:
     - name: Checkout code
@@ -36,7 +37,7 @@ jobs:
         
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
-      if: matrix.ruby-version == env.RUBY_VERSION
+      if: matrix.ruby-version == env.RUBY_VERSION && matrix.os == 'ubuntu-latest'
       with:
         file: ./coverage/.resultset.json
         flags: unittests
@@ -80,6 +81,9 @@ jobs:
         echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
         coverage=$(grep -o '[0-9]*\.[0-9]*%' coverage/index.html | head -1)
         echo "Current coverage: $coverage" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Tests passed on: Linux, Windows, macOS" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Ruby versions tested: 3.1, 3.2, 3.3" >> $GITHUB_STEP_SUMMARY
         
     - name: Generate coverage report
       run: |

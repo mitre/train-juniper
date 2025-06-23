@@ -46,13 +46,31 @@ module TrainPlugins
       def create_ssh_askpass_script(password)
         require 'tempfile'
 
-        script = Tempfile.new(['ssh_askpass', '.sh'])
-        script.write("#!/bin/bash\necho '#{password}'\n")
-        script.close
-        File.chmod(0o755, script.path)
-
-        @logger.debug("Created SSH_ASKPASS script at #{script.path}")
-        script.path
+        if Gem.win_platform?
+          # Create Windows PowerShell script
+          script = Tempfile.new(['ssh_askpass', '.ps1'])
+          # PowerShell handles escaping better, just escape quotes
+          escaped_password = password.gsub("'", "''")
+          script.write("Write-Output '#{escaped_password}'\r\n")
+          script.close
+          
+          # Create a wrapper batch file to execute PowerShell with bypass policy
+          wrapper = Tempfile.new(['ssh_askpass_wrapper', '.bat'])
+          wrapper.write("@echo off\r\npowershell.exe -ExecutionPolicy Bypass -File \"#{script.path}\"\r\n")
+          wrapper.close
+          
+          @logger.debug("Created SSH_ASKPASS PowerShell script at #{script.path} with wrapper at #{wrapper.path}")
+          wrapper.path
+        else
+          # Create Unix shell script
+          script = Tempfile.new(['ssh_askpass', '.sh'])
+          script.write("#!/bin/bash\necho '#{password}'\n")
+          script.close
+          File.chmod(0o755, script.path)
+          
+          @logger.debug("Created SSH_ASKPASS script at #{script.path}")
+          script.path
+        end
       end
 
       # Generate SSH proxy command for bastion host using ProxyJump (-J)
