@@ -47,6 +47,7 @@ module TrainPlugins
         require 'tempfile'
 
         if Gem.win_platform?
+          # :nocov:
           # Create Windows PowerShell script
           script = Tempfile.new(['ssh_askpass', '.ps1'])
           # PowerShell handles escaping better, just escape quotes
@@ -61,6 +62,7 @@ module TrainPlugins
           
           @logger.debug("Created SSH_ASKPASS PowerShell script at #{script.path} with wrapper at #{wrapper.path}")
           wrapper.path
+          # :nocov:
         else
           # Create Unix shell script
           script = Tempfile.new(['ssh_askpass', '.sh'])
