@@ -219,7 +219,7 @@ task :release do
   version = File.read('lib/train-juniper/version.rb')[/VERSION = ['"](.+)['"]/, 1]
   tag = "v#{version}"
 
-  # Check if tag already exists  
+  # Check if tag already exists
   existing_tags = `git tag -l #{tag}`.strip
   if existing_tags.empty?
     # Create and push tag
@@ -239,14 +239,14 @@ task :release do
   else
     # Tag exists, assume we're in GitHub Actions and need to build/push gem
     puts "Tag #{tag} already exists - proceeding with gem build and push"
-    
+
     # Build the gem
     gem_file = "train-juniper-#{version}.gem"
-    system("gem build train-juniper.gemspec") or abort("Failed to build gem")
-    
+    system('gem build train-juniper.gemspec') or abort('Failed to build gem')
+
     # Push to RubyGems
-    system("gem push #{gem_file}") or abort("Failed to push gem to RubyGems")
-    
+    system("gem push #{gem_file}") or abort('Failed to push gem to RubyGems')
+
     puts "✅ Published #{gem_file} to RubyGems.org"
   end
 end
