@@ -14,7 +14,8 @@
 require 'train'
 require 'logger'
 
-# Juniper-specific platform detection
+# Juniper-specific modules
+require 'train-juniper/constants'
 require 'train-juniper/platform'
 require 'train-juniper/connection/validation'
 require 'train-juniper/connection/command_executor'
@@ -56,11 +57,11 @@ module TrainPlugins
         host: { env: 'JUNIPER_HOST' },
         user: { env: 'JUNIPER_USER' },
         password: { env: 'JUNIPER_PASSWORD' },
-        port: { env: 'JUNIPER_PORT', type: :int, default: 22 },
+        port: { env: 'JUNIPER_PORT', type: :int, default: Constants::DEFAULT_SSH_PORT },
         timeout: { env: 'JUNIPER_TIMEOUT', type: :int, default: 30 },
         bastion_host: { env: 'JUNIPER_BASTION_HOST' },
         bastion_user: { env: 'JUNIPER_BASTION_USER' },
-        bastion_port: { env: 'JUNIPER_BASTION_PORT', type: :int, default: 22 },
+        bastion_port: { env: 'JUNIPER_BASTION_PORT', type: :int, default: Constants::DEFAULT_SSH_PORT },
         bastion_password: { env: 'JUNIPER_BASTION_PASSWORD' },
         proxy_command: { env: 'JUNIPER_PROXY_COMMAND' }
       }.freeze
@@ -152,7 +153,7 @@ module TrainPlugins
       # @raise [NotImplementedError] Always raises as uploads are not supported
       # @note Network devices use command-based configuration instead of file uploads
       def upload(locals, remote)
-        raise NotImplementedError, "#{self.class} does not implement #upload() - network devices use command-based configuration"
+        raise NotImplementedError, Constants::UPLOAD_NOT_SUPPORTED
       end
 
       # Download files from Juniper device (not supported)
@@ -161,12 +162,8 @@ module TrainPlugins
       # @raise [NotImplementedError] Always raises as downloads are not supported
       # @note Use run_command() to retrieve configuration data instead
       def download(remotes, local)
-        raise NotImplementedError, "#{self.class} does not implement #download() - use run_command() to retrieve configuration data"
+        raise NotImplementedError, Constants::DOWNLOAD_NOT_SUPPORTED
       end
-
-
-
-
 
       # Check connection health
       # @return [Boolean] true if connection is healthy, false otherwise
@@ -195,22 +192,6 @@ module TrainPlugins
         @logger.debug("Juniper connection initialized with options: #{safe_options.inspect}")
         @logger.debug("Environment: JUNIPER_BASTION_USER=#{env_value('JUNIPER_BASTION_USER')} -> bastion_user=#{@options[:bastion_user]}")
       end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     end
   end
 end

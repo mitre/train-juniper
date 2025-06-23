@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'train-juniper/constants'
+
 module TrainPlugins
   module Juniper
     # File abstraction for Juniper configuration and operational data
@@ -20,12 +22,12 @@ module TrainPlugins
       def content
         # For Juniper devices, translate file paths to appropriate commands
         case @path
-        when %r{/config/(.*)}
+        when Constants::CONFIG_PATH_PATTERN
           # Configuration sections: /config/interfaces -> show configuration interfaces
           section = ::Regexp.last_match(1)
           result = @connection.run_command("show configuration #{section}")
           result.stdout
-        when %r{/operational/(.*)}
+        when Constants::OPERATIONAL_PATH_PATTERN
           # Operational data: /operational/interfaces -> show interfaces
           section = ::Regexp.last_match(1)
           result = @connection.run_command("show #{section}")
@@ -54,13 +56,13 @@ module TrainPlugins
       # File upload not supported for network devices
       # @raise [NotImplementedError] always raises as upload is not supported
       def upload(_content)
-        raise NotImplementedError, 'File upload not supported for Juniper devices'
+        raise NotImplementedError, Constants::UPLOAD_NOT_SUPPORTED
       end
 
       # File download not supported for network devices
       # @raise [NotImplementedError] always raises as download is not supported
       def download(_local_path)
-        raise NotImplementedError, 'File download not supported for Juniper devices'
+        raise NotImplementedError, Constants::DOWNLOAD_NOT_SUPPORTED
       end
     end
   end

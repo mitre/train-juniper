@@ -185,14 +185,14 @@ describe TrainPlugins::Juniper::Connection do
 
     it 'should provide helpful error message for upload' do
       error = _(-> { connection.upload('test.txt', '/config/test.txt') }).must_raise(NotImplementedError)
-      _(error.message).must_match(/does not implement #upload/)
-      _(error.message).must_match(/network devices use command-based configuration/)
+      _(error.message).must_match(/File operations not supported/)
+      _(error.message).must_match(/use command-based configuration/)
     end
 
     it 'should provide helpful error message for download' do
       error = _(-> { connection.download(['/config/test.txt'], '.') }).must_raise(NotImplementedError)
-      _(error.message).must_match(/does not implement #download/)
-      _(error.message).must_match(/use run_command.*to retrieve configuration data/)
+      _(error.message).must_match(/File operations not supported/)
+      _(error.message).must_match(/use run_command.*to retrieve data/)
     end
 
     it 'should handle upload with array of local files' do
@@ -238,7 +238,7 @@ describe TrainPlugins::Juniper::Connection do
     it 'should validate bastion port range' do
       options = mock_options.merge(bastion_host: 'jump.host', bastion_port: 0)
       err = _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
-      _(err.message).must_match(/Invalid bastion_port.*must be 1-65535/)
+      _(err.message).must_match(/Invalid bastion port.*must be 1-65535/)
     end
   end
 
@@ -354,12 +354,12 @@ describe TrainPlugins::Juniper::Connection do
 
     it 'raises NotImplementedError for upload' do
       err = _(proc { connection.upload('local.txt', 'remote.txt') }).must_raise NotImplementedError
-      _(err.message).must_match(/does not implement #upload/)
+      _(err.message).must_match(/File operations not supported/)
     end
 
     it 'raises NotImplementedError for download' do
       err = _(proc { connection.download('remote.txt', 'local.txt') }).must_raise NotImplementedError
-      _(err.message).must_match(/does not implement #download/)
+      _(err.message).must_match(/File operations not supported/)
     end
   end
 

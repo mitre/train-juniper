@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'train'
-
 module TrainPlugins
   module Juniper
     # Handles SSH session management and configuration

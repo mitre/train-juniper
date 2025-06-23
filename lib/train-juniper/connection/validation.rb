@@ -26,8 +26,7 @@ module TrainPlugins
 
       # Validate port is in valid range
       def validate_port!
-        port = @options[:port].to_i
-        raise Train::ClientError, "Invalid port: #{@options[:port]} (must be 1-65535)" unless port.between?(1, 65_535)
+        validate_port_value!(:port)
       end
 
       # Validate timeout is positive number
@@ -38,8 +37,18 @@ module TrainPlugins
 
       # Validate bastion port is in valid range
       def validate_bastion_port!
-        port = @options[:bastion_port].to_i
-        raise Train::ClientError, "Invalid bastion_port: #{@options[:bastion_port]} (must be 1-65535)" unless port.between?(1, 65_535)
+        validate_port_value!(:bastion_port)
+      end
+
+      private
+
+      # DRY method for validating port values
+      # @param port_key [Symbol] The options key containing the port value
+      # @param port_name [String] The name to use in error messages (defaults to port_key)
+      def validate_port_value!(port_key, port_name = nil)
+        port_name ||= port_key.to_s.tr('_', ' ')
+        port = @options[port_key].to_i
+        raise Train::ClientError, "Invalid #{port_name}: #{@options[port_key]} (must be 1-65535)" unless port.between?(1, 65_535)
       end
 
       # Validate proxy configuration options (Train standard)

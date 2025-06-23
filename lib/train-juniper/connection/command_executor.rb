@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'train'
-
 module TrainPlugins
   module Juniper
     # Handles command execution, sanitization, and output formatting

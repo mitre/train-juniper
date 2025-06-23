@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'train-juniper/constants'
+
 module TrainPlugins
   module Juniper
     # Handles bastion host proxy configuration and authentication
@@ -13,7 +15,7 @@ module TrainPlugins
         bastion_user = @options[:bastion_user] || @options[:user]
         bastion_port = @options[:bastion_port]
 
-        proxy_jump = if bastion_port == 22
+        proxy_jump = if bastion_port == Constants::DEFAULT_SSH_PORT
                        "#{bastion_user}@#{@options[:bastion_host]}"
                      else
                        "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
@@ -61,13 +63,12 @@ module TrainPlugins
         args = ['ssh']
 
         # SSH options for connection
-        args += ['-o', 'UserKnownHostsFile=/dev/null']
-        args += ['-o', 'StrictHostKeyChecking=no']
-        args += ['-o', 'LogLevel=ERROR']
-        args += ['-o', 'ForwardAgent=no']
+        Constants::STANDARD_SSH_OPTIONS.each do |key, value|
+          args += ['-o', "#{key}=#{value}"]
+        end
 
         # Use ProxyJump (-J) which handles password authentication properly
-        jump_host = if bastion_port == 22
+        jump_host = if bastion_port == Constants::DEFAULT_SSH_PORT
                       "#{bastion_user}@#{@options[:bastion_host]}"
                     else
                       "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
