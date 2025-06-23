@@ -218,6 +218,57 @@ end
 - **Code Annotations**: Add numbered annotations with .annotate
 - **Material Icons**: :material-star: for visual enhancement
 
+### 29. Cross-Platform Support and Bundler Platforms
+- **Platform Management**: Essential for gems that work across different operating systems
+- **Bundler 2.2+ Changes**: No longer includes 'ruby' platform by default
+- **CI/CD Failures**: Missing platforms cause "Your bundle only supports platforms..." errors
+- **Adding Platforms**: Use `bundle lock --add-platform PLATFORM_NAME`
+- **Platform-Specific Gems**: Some gems have native extensions (ffi, nokogiri, etc.)
+
+#### Recommended Platform Support for Train Plugins
+```bash
+# Core platforms for maximum compatibility
+bundle lock --add-platform ruby              # Platform-independent fallback
+bundle lock --add-platform x86_64-linux      # Standard Linux
+bundle lock --add-platform x64-mingw-ucrt    # Modern Windows
+bundle lock --add-platform x86_64-darwin     # Intel macOS
+bundle lock --add-platform arm64-darwin-23   # GitHub Actions macOS runners
+bundle lock --add-platform arm64-darwin-24   # Local Apple Silicon Macs
+
+# Additional recommended platforms
+bundle lock --add-platform aarch64-linux     # ARM64 Linux (AWS Graviton)
+bundle lock --add-platform x86_64-linux-musl # Alpine Linux (containers)
+
+# Network/Enterprise environments
+bundle lock --add-platform x86_64-freebsd    # FreeBSD (relevant for JunOS)
+bundle lock --add-platform x86_64-solaris    # Solaris/illumos
+```
+
+#### Platform Considerations
+- **Development Platforms**: Add your local platform automatically on `bundle install`
+- **CI/CD Platforms**: Must be added explicitly before pushing
+- **Deployment Platforms**: Consider where users will run your plugin
+- **Container Platforms**: Alpine (musl) common in Docker environments
+- **Network Devices**: FreeBSD relevant for Juniper (JunOS based on FreeBSD)
+
+#### Checking Current Platforms
+```bash
+# View platforms in Gemfile.lock
+grep -A 20 "^PLATFORMS" Gemfile.lock
+
+# Show current platform
+ruby -e "puts RUBY_PLATFORM"
+
+# List all platforms for installed gems
+bundle platform
+```
+
+#### Platform Testing Strategy
+- **Primary Testing**: Linux, macOS, Windows in CI/CD
+- **Secondary Testing**: Containers, ARM platforms
+- **Platform-Specific Code**: Use `:nocov:` markers for untestable paths
+- **Conditional Logic**: Use `Gem.win_platform?` or `RUBY_PLATFORM` checks
+
 ## Topics for Future Development
 - Dependency injection patterns for testability
 - Performance considerations for modular vs monolithic code
