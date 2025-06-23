@@ -243,7 +243,7 @@ task :release do
     # Build the gem in pkg/ directory (standard convention)
     FileUtils.mkdir_p('pkg')
     gem_file = "train-juniper-#{version}.gem"
-    system('gem build train-juniper.gemspec -o pkg/') or abort('Failed to build gem')
+    system("gem build train-juniper.gemspec -o pkg/#{gem_file}") or abort('Failed to build gem')
 
     # Push to RubyGems from pkg/ directory
     system("gem push pkg/#{gem_file}") or abort('Failed to push gem to RubyGems')
