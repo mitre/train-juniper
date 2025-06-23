@@ -81,6 +81,17 @@ jobs:
         coverage=$(grep -o '[0-9]*\.[0-9]*%' coverage/index.html | head -1)
         echo "Current coverage: $coverage" >> $GITHUB_STEP_SUMMARY
         
+    - name: Generate coverage report
+      run: |
+        bundle exec ruby utils/coverage_analysis.rb --format markdown --output docs/coverage-report.md
+        echo "✅ Coverage report generated" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: docs/coverage-report.md
+        
     - name: Validate gem build
       run: |
         gem build train-juniper.gemspec

@@ -62,11 +62,14 @@ namespace :release do # rubocop:disable Metrics/BlockLength
     # Create release notes
     create_release_notes(new_version)
 
+    # Generate coverage report
+    generate_coverage_report
+
     # Update mkdocs.yml to include new release notes
     update_mkdocs_nav(new_version)
 
     # Commit changes
-    system("git add lib/train-juniper/version.rb Gemfile.lock CHANGELOG.md docs/release-notes/v#{new_version}.md mkdocs.yml")
+    system("git add lib/train-juniper/version.rb Gemfile.lock CHANGELOG.md docs/release-notes/v#{new_version}.md docs/coverage-report.md mkdocs.yml")
     system("git commit -m 'Bump version to #{new_version}'") or abort('Failed to commit changes')
 
     puts "\n🎉 Release #{new_version} prepared!"
@@ -162,6 +165,17 @@ namespace :release do # rubocop:disable Metrics/BlockLength
 
   def current_version
     File.read('lib/train-juniper/version.rb')[/VERSION = ['"](.+)['"]/, 1]
+  end
+
+  def generate_coverage_report
+    puts 'Generating coverage report...'
+    
+    # Run tests to generate fresh coverage data
+    system('bundle exec rake test > /dev/null 2>&1') or abort('Failed to run tests')
+    
+    # Generate markdown coverage report
+    system('bundle exec ruby utils/coverage_analysis.rb --format markdown --output docs/coverage-report.md') or abort('Failed to generate coverage report')
+    puts '✓ Generated coverage report at docs/coverage-report.md'
   end
 
   def update_mkdocs_nav(version)
