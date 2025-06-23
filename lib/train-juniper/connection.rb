@@ -19,6 +19,8 @@ require 'train-juniper/platform'
 require 'train-juniper/connection/validation'
 require 'train-juniper/connection/command_executor'
 require 'train-juniper/connection/error_handling'
+require 'train-juniper/connection/ssh_session'
+require 'train-juniper/connection/bastion_proxy'
 require 'train-juniper/helpers/environment'
 require 'train-juniper/helpers/mock_responses'
 require 'train-juniper/file_abstraction/juniper_file'
@@ -39,6 +41,10 @@ module TrainPlugins
       include TrainPlugins::Juniper::CommandExecutor
       # Include error handling methods
       include TrainPlugins::Juniper::ErrorHandling
+      # Include SSH session management
+      include TrainPlugins::Juniper::SSHSession
+      # Include bastion proxy support
+      include TrainPlugins::Juniper::BastionProxy
 
       # Alias for Train CommandResult for backward compatibility
       CommandResult = Train::Extras::CommandResult
@@ -158,22 +164,6 @@ module TrainPlugins
 
 
 
-      # SSH option mapping configuration
-      SSH_OPTION_MAPPING = {
-        port: :port,
-        password: :password,
-        timeout: :timeout,
-        keepalive: :keepalive,
-        keepalive_interval: :keepalive_interval,
-        keys: ->(opts) { Array(opts[:key_files]) if opts[:key_files] },
-        keys_only: ->(opts) { opts[:keys_only] if opts[:key_files] }
-      }.freeze
-
-      # Default SSH options for Juniper connections
-      # @note verify_host_key is set to :never for network device compatibility
-      SSH_DEFAULTS = {
-        verify_host_key: :never
-      }.freeze
 
 
       # Check connection health
@@ -205,159 +195,19 @@ module TrainPlugins
       end
 
 
-      # Establish SSH connection to Juniper device
-      def connect
-        return if connected?
-
-        begin
-          # Use direct SSH connection (network device pattern)
-          # Defensive loading - only require if not fully loaded
-          require 'net/ssh' unless defined?(Net::SSH) && Net::SSH.respond_to?(:start)
-
-          @logger.debug('Establishing SSH connection to Juniper device')
-
-          ssh_options = build_ssh_options
-
-          # Add bastion host support if configured
-          configure_bastion_proxy(ssh_options) if @options[:bastion_host]
-
-          @logger.debug("Connecting to #{@options[:host]}:#{@options[:port]} as #{@options[:user]}")
-
-          # Direct SSH connection
-          @ssh_session = Net::SSH.start(@options[:host], @options[:user], ssh_options)
-          @logger.debug('SSH connection established successfully')
-
-          # Configure JunOS session for automation
-          test_and_configure_session
-        rescue StandardError => e
-          handle_connection_error(e)
-        end
-      end
-
-      # Check if SSH connection is active
-      def connected?
-        return true if @options[:mock]
-
-        !@ssh_session.nil?
-      rescue StandardError
-        false
-      end
-
-      # Check if running in mock mode
-      def mock?
-        @options[:mock] == true
-      end
-
-      # Configure bastion proxy for SSH connection
-      def configure_bastion_proxy(ssh_options)
-        require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
-
-        # Build proxy jump string from bastion options
-        bastion_user = @options[:bastion_user] || @options[:user]
-        bastion_port = @options[:bastion_port]
-
-        proxy_jump = if bastion_port == 22
-                       "#{bastion_user}@#{@options[:bastion_host]}"
-                     else
-                       "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
-                     end
-
-        @logger.debug("Using bastion host: #{proxy_jump}")
-
-        # Set up automated password authentication via SSH_ASKPASS
-        setup_bastion_password_auth
-
-        ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
-      end
-
-      # Set up SSH_ASKPASS for bastion password authentication
-      def setup_bastion_password_auth
-        bastion_password = @options[:bastion_password] || @options[:password]
-        return unless bastion_password
-
-        @ssh_askpass_script = create_ssh_askpass_script(bastion_password)
-        ENV['SSH_ASKPASS'] = @ssh_askpass_script
-        ENV['SSH_ASKPASS_REQUIRE'] = 'force'
-        @logger.debug('Configured SSH_ASKPASS for automated bastion authentication')
-      end
 
 
 
 
-      # Test connection and configure JunOS session
-      def test_and_configure_session
-        @logger.debug('Testing SSH connection and configuring JunOS session')
-
-        # Test connection first
-        @ssh_session.exec!('echo "connection test"')
-        @logger.debug('SSH connection test successful')
-
-        # Optimize CLI for automation
-        @ssh_session.exec!('set cli screen-length 0')
-        @ssh_session.exec!('set cli screen-width 0')
-        @ssh_session.exec!('set cli complete-on-space off') if @options[:disable_complete_on_space]
-
-        @logger.debug('JunOS session configured successfully')
-      rescue StandardError => e
-        @logger.warn("Failed to configure JunOS session: #{e.message}")
-      end
 
 
 
 
-      # Build SSH connection options from @options
-      def build_ssh_options
-        SSH_DEFAULTS.merge(
-          SSH_OPTION_MAPPING.each_with_object({}) do |(ssh_key, option_key), opts|
-            value = option_key.is_a?(Proc) ? option_key.call(@options) : @options[option_key]
-            opts[ssh_key] = value unless value.nil?
-          end
-        )
-      end
 
-      # Create temporary SSH_ASKPASS script for automated password authentication
-      def create_ssh_askpass_script(password)
-        require 'tempfile'
 
-        script = Tempfile.new(['ssh_askpass', '.sh'])
-        script.write("#!/bin/bash\necho '#{password}'\n")
-        script.close
-        File.chmod(0o755, script.path)
 
-        @logger.debug("Created SSH_ASKPASS script at #{script.path}")
-        script.path
-      end
 
-      # Generate SSH proxy command for bastion host using ProxyJump (-J)
-      def generate_bastion_proxy_command(bastion_user, bastion_port)
-        args = ['ssh']
 
-        # SSH options for connection
-        args += ['-o', 'UserKnownHostsFile=/dev/null']
-        args += ['-o', 'StrictHostKeyChecking=no']
-        args += ['-o', 'LogLevel=ERROR']
-        args += ['-o', 'ForwardAgent=no']
-
-        # Use ProxyJump (-J) which handles password authentication properly
-        jump_host = if bastion_port == 22
-                      "#{bastion_user}@#{@options[:bastion_host]}"
-                    else
-                      "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
-                    end
-        args += ['-J', jump_host]
-
-        # Add SSH keys if specified
-        if @options[:key_files]
-          Array(@options[:key_files]).each do |key_file|
-            args += ['-i', key_file]
-          end
-        end
-
-        # Target connection - %h and %p will be replaced by Net::SSH
-        args += ['%h', '-p', '%p']
-
-        args.join(' ')
-      end
 
     end
   end
