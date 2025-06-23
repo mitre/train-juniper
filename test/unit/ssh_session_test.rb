@@ -120,6 +120,27 @@ describe 'SSHSession module' do
     end
   end
   
+  describe 'connect' do
+    it 'should return early if already connected' do
+      options = default_mock_options(mock: false, skip_connect: true)
+      conn = connection_class.new(options)
+      
+      # Simulate already connected
+      conn.instance_variable_set(:@ssh_session, Object.new)
+      
+      # Mock logger to ensure no connection attempt is made
+      logger = Minitest::Mock.new
+      # No expectations - connect should return early
+      conn.instance_variable_set(:@logger, logger)
+      
+      # Call connect - should return early at line 26
+      conn.send(:connect)
+      
+      # Verify logger had no calls
+      logger.verify
+    end
+  end
+  
   describe 'connected?' do
     it 'should return true when ssh_session exists' do
       options = default_mock_options(mock: false, skip_connect: true)
