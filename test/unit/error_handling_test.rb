@@ -176,25 +176,25 @@ describe 'Error Handling and Edge Cases' do
       _(result.stderr).must_equal('')
     end
   end
-  
+
   describe 'error handling methods' do
     let(:connection) { connection_class.new(mock_options) }
     let(:logger) { Minitest::Mock.new }
-    
+
     before do
       connection.instance_variable_set(:@logger, logger)
     end
-    
+
     it 'should handle connection errors with helpful messages' do
       error = StandardError.new('Connection refused')
       logger.expect :error, nil, ['SSH connection failed: Connection refused']
-      
+
       err = _(-> { connection.send(:handle_connection_error, error) }).must_raise(Train::TransportError)
       _(err.message).must_equal('Failed to connect to Juniper device test.device: Connection refused')
-      
+
       logger.verify
     end
-    
+
     it 'should detect and handle bastion authentication errors' do
       bastion_options = bastion_mock_options(
         host: 'device.local',
@@ -204,47 +204,47 @@ describe 'Error Handling and Edge Cases' do
       )
       bastion_conn = connection_class.new(bastion_options)
       bastion_conn.instance_variable_set(:@logger, logger)
-      
+
       error = StandardError.new('Permission denied (publickey,password)')
       logger.expect :error, nil, ['SSH connection failed: Permission denied (publickey,password)']
-      
+
       err = _(-> { bastion_conn.send(:handle_connection_error, error) }).must_raise(Train::TransportError)
       _(err.message).must_include('Failed to connect to Juniper device device.local via bastion jump.example.com')
       _(err.message).must_include('Incorrect bastion credentials (user: jumpuser)')
       _(err.message).must_include('Bastion host SSH service not available on port 2222')
-      
+
       logger.verify
     end
-    
+
     it 'should check bastion auth errors correctly' do
       bastion_options = bastion_mock_options(bastion_host: 'jump.host')
       bastion_conn = connection_class.new(bastion_options)
-      
+
       # Permission denied error
       error1 = StandardError.new('Permission denied (publickey)')
       _(bastion_conn.send(:bastion_auth_error?, error1)).must_equal(true)
-      
+
       # Command failed error
       error2 = StandardError.new('SSH command failed with exit status 255')
       _(bastion_conn.send(:bastion_auth_error?, error2)).must_equal(true)
-      
+
       # Other error
       error3 = StandardError.new('Connection timeout')
       _(bastion_conn.send(:bastion_auth_error?, error3)).must_equal(false)
     end
-    
+
     it 'should generate detailed bastion error messages' do
       bastion_options = bastion_mock_options(
         host: 'router.local',
         bastion_host: 'bastion.corp.com',
         bastion_user: 'svc_user',
-        bastion_port: 22222
+        bastion_port: 22_222
       )
       bastion_conn = connection_class.new(bastion_options)
-      
+
       error = StandardError.new('Authentication failed')
       message = bastion_conn.send(:bastion_error_message, error)
-      
+
       _(message).must_include('Failed to connect to Juniper device router.local via bastion bastion.corp.com')
       _(message).must_include('Authentication failed')
       _(message).must_include('Incorrect bastion credentials (user: svc_user)')

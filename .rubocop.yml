@@ -1,3 +1,5 @@
+inherit_from: .rubocop_todo.yml
+
 # RuboCop configuration for Train-Juniper plugin
 # Network transport plugins have different patterns than typical Ruby apps
 
