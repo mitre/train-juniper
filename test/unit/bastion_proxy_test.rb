@@ -5,7 +5,7 @@ require 'train-juniper/connection'
 
 describe 'BastionProxy module' do
   let(:connection_class) { TrainPlugins::Juniper::Connection }
-  
+
   # Helper to assert SSH_ASKPASS script path based on platform
   def assert_ssh_askpass_script_created
     askpass_path = ENV.fetch('SSH_ASKPASS', nil)
@@ -15,7 +15,7 @@ describe 'BastionProxy module' do
       _(askpass_path).must_match(%r{/ssh_askpass.*\.sh$})
     end
   end
-  
+
   let(:bastion_options) do
     default_mock_options(
       host: 'device.local',
@@ -141,7 +141,7 @@ describe 'BastionProxy module' do
       script_path = connection.send(:create_ssh_askpass_script, 'test_pass')
 
       _(File.exist?(script_path)).must_equal(true)
-      
+
       content = File.read(script_path)
       if Gem.win_platform?
         _(script_path).must_match(/\.bat$/)
@@ -160,20 +160,20 @@ describe 'BastionProxy module' do
 
     it 'should escape single quotes on Windows PowerShell' do
       skip 'Windows-specific test' unless Gem.win_platform?
-      
+
       wrapper_path = connection.send(:create_ssh_askpass_script, "test'pass'word")
-      
+
       # The wrapper should exist
       _(File.exist?(wrapper_path)).must_equal(true)
-      
+
       # Read wrapper to find PowerShell script path
       wrapper_content = File.read(wrapper_path)
       ps1_path = wrapper_content.match(/-File "([^"]+)"/)[1]
-      
+
       # Check PowerShell script has escaped quotes
       ps_content = File.read(ps1_path)
       _(ps_content).must_include("test''pass''word")
-      
+
       # Clean up
       FileUtils.rm_f(wrapper_path)
       FileUtils.rm_f(ps1_path)
