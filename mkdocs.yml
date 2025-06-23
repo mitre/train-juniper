@@ -90,6 +90,8 @@ nav:
       - Notice: NOTICE.md
     - Release Notes:
 
+      - v0.7.3: release-notes/v0.7.3.md
+
       - v0.7.2: release-notes/v0.7.2.md
 
       - v0.7.1: release-notes/v0.7.1.md
