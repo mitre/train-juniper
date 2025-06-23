@@ -59,10 +59,7 @@ jobs:
           draft: false
           prerelease: false
           
-      - name: Build gem
-        run: gem build train-juniper.gemspec
-        
-      - name: Publish to RubyGems
-        uses: rubygems/release-gem@v1
-        with:
-          await-release: true
+      - name: Build and publish gem
+        run: |
+          gem build train-juniper.gemspec
+          gem push train-juniper-*.gem
