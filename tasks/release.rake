@@ -219,22 +219,34 @@ task :release do
   version = File.read('lib/train-juniper/version.rb')[/VERSION = ['"](.+)['"]/, 1]
   tag = "v#{version}"
 
-  # Check if tag already exists
+  # Check if tag already exists  
   existing_tags = `git tag -l #{tag}`.strip
-  abort "Tag #{tag} already exists. Did you forget to bump the version?" unless existing_tags.empty?
+  if existing_tags.empty?
+    # Create and push tag
+    system("git tag #{tag}") or abort("Failed to create tag #{tag}")
+    system("git push origin #{tag}") or abort("Failed to push tag #{tag}")
 
-  # Create and push tag
-  system("git tag #{tag}") or abort("Failed to create tag #{tag}")
-  system("git push origin #{tag}") or abort("Failed to push tag #{tag}")
-
-  puts "✅ Tagged #{tag}"
-  puts '✅ Pushed tag to GitHub'
-  puts ''
-  puts '🚀 GitHub Actions will now:'
-  puts '   - Run all tests'
-  puts '   - Run security audits'
-  puts '   - Create GitHub Release'
-  puts '   - Publish gem to RubyGems.org'
-  puts ''
-  puts '📦 Monitor the release at: https://github.com/mitre/train-juniper/actions'
+    puts "✅ Tagged #{tag}"
+    puts '✅ Pushed tag to GitHub'
+    puts ''
+    puts '🚀 GitHub Actions will now:'
+    puts '   - Run all tests'
+    puts '   - Run security audits'
+    puts '   - Create GitHub Release'
+    puts '   - Publish gem to RubyGems.org'
+    puts ''
+    puts '📦 Monitor the release at: https://github.com/mitre/train-juniper/actions'
+  else
+    # Tag exists, assume we're in GitHub Actions and need to build/push gem
+    puts "Tag #{tag} already exists - proceeding with gem build and push"
+    
+    # Build the gem
+    gem_file = "train-juniper-#{version}.gem"
+    system("gem build train-juniper.gemspec") or abort("Failed to build gem")
+    
+    # Push to RubyGems
+    system("gem push #{gem_file}") or abort("Failed to push gem to RubyGems")
+    
+    puts "✅ Published #{gem_file} to RubyGems.org"
+  end
 end
