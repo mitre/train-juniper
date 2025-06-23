@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2025-06-23
+
+### Added
+
+- Implement Priority 2 DRY improvements and boost coverage to 90.88%
+- Add coverage analysis utility script
+- Boost test coverage to 93.13% and enhance coverage analysis tool
+- **coverage**: Integrate coverage reporting into release process and CI/CD
+- **docs**: Enhance coverage report with Material for MkDocs styling
+
+### Documentation
+
+- Add YARD documentation for inspect method and test organization guide
+- Add YARD documentation for all constants
+- **roadmap**: Modernize with v0.7.1 status and Material styling
+
+### Fixed
+
+- Add v0.7.0 to mkdocs and automate nav updates
+- **coverage**: Properly handle SimpleCov :nocov: markers in analysis
+- **docs**: Move Security Policy to About section in navigation
+
+### Miscellaneous Tasks
+
+- Fix all RuboCop violations and prepare for v0.7.1 release
+- Remove .rubocop_todo.yml after fixing all violations
+
+### Refactor
+
+- Streamline release process for GitHub Actions
+- Phase 1 modularization - extract JuniperFile, EnvironmentHelpers, and Validation
+- Reorganize directory structure to follow Train plugin conventions
+- Phase 2 modularization - extract CommandExecutor and ErrorHandling
+- Phase 3 modularization - extract SSHSession and BastionProxy
+- DRY improvements for v0.7.1
+- Fix all RuboCop complexity issues without using todos
+- **docs**: Reorganize navigation for better user experience
+
+### Testing
+
+- Fix platform edge case test and boost coverage to 99.75%
+- Achieve 100% code coverage 🎯
+
 ## [0.7.0] - 2025-06-23
 
 ### Added
