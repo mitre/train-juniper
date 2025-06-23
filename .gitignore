@@ -89,3 +89,9 @@ docs/api/
 IMMEDIATE_ACTION_PLAN.md
 recovery-prompt-bug-fix.md
 recovery-prompt-resource-pack-scope.md
+
+# Git submodules (not needed after project separation)
+.gitmodules
+
+# Large test images (should not be committed)
+test/images/**/*.tgz
