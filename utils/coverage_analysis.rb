@@ -32,7 +32,7 @@ def parse_options
   options
 end
 
-def analyze_coverage(options = {})
+def load_coverage_data
   coverage_file = 'coverage/.resultset.json'
   unless File.exist?(coverage_file)
     puts "Error: Coverage file not found at #{coverage_file}"
@@ -41,9 +41,10 @@ def analyze_coverage(options = {})
   end
 
   data = JSON.parse(File.read(coverage_file))
-  coverage_data = data['Functional Tests']['coverage']
+  data['Functional Tests']['coverage']
+end
 
-  # Calculate coverage for each file
+def process_coverage_files(coverage_data)
   files = {}
   coverage_data.each do |file, line_data|
     next unless file.include?('/lib/train-juniper/')
@@ -62,6 +63,20 @@ def analyze_coverage(options = {})
       full_path: file
     }
   end
+  files
+end
+
+def calculate_impact_files(incomplete_files, total_lines)
+  incomplete_files.sort_by do |_, data|
+    uncovered_count = data[:total] - data[:covered]
+    importance = data[:total].to_f / total_lines * 100
+    uncovered_count * importance
+  end.reverse.first(3)
+end
+
+def analyze_coverage(options = {})
+  coverage_data = load_coverage_data
+  files = process_coverage_files(coverage_data)
 
   # Sort by percentage (lowest first)
   sorted = files.sort_by { |_, v| v[:percentage] }
@@ -76,20 +91,26 @@ def analyze_coverage(options = {})
   complete_files = sorted.select { |_, data| data[:percentage] == 100 }
 
   # Find impact files
-  impact_files = incomplete_files.sort_by do |_, data|
-    uncovered_count = data[:total] - data[:covered]
-    importance = data[:total].to_f / total_lines * 100
-    uncovered_count * importance
-  end.reverse.first(3)
+  impact_files = calculate_impact_files(incomplete_files, total_lines)
 
   # Format output based on selected format
+  stats = {
+    files: files,
+    overall: overall,
+    total_lines: total_lines,
+    total_covered: total_covered,
+    incomplete_files: incomplete_files,
+    complete_files: complete_files,
+    impact_files: impact_files
+  }
+
   output = case options[:format]
            when :json
-             format_json_output(files, overall, total_lines, total_covered, incomplete_files, complete_files, impact_files)
+             format_json_output(stats)
            when :markdown
-             format_markdown_output(files, overall, total_lines, total_covered, incomplete_files, complete_files, impact_files)
+             format_markdown_output(stats)
            else
-             format_human_output(files, overall, total_lines, total_covered, incomplete_files, complete_files, impact_files)
+             format_human_output(stats)
            end
 
   # Write to file or stdout
@@ -101,13 +122,8 @@ def analyze_coverage(options = {})
   end
 end
 
-def format_human_output(files, overall, total_lines, total_covered, incomplete_files, complete_files, impact_files)
+def format_incomplete_files_section(incomplete_files)
   output = []
-
-  output << 'Coverage Analysis for train-juniper'
-  output << ('=' * 60)
-  output << ''
-
   if incomplete_files.any?
     output << 'Files needing coverage improvements:'
     output << ('-' * 60)
@@ -121,15 +137,52 @@ def format_human_output(files, overall, total_lines, total_covered, incomplete_f
   else
     output << '🎉 All files have 100% coverage!'
   end
+  output
+end
 
-  if complete_files.any?
-    output << "\n#{'=' * 60}"
-    output << 'Files with complete coverage (100%):'
-    output << ('-' * 60)
-    complete_files.each do |file, data|
-      output << "✓ #{file}: #{data[:covered]} lines"
-    end
+def format_complete_files_section(complete_files)
+  return [] if complete_files.empty?
+
+  output = []
+  output << "\n#{'=' * 60}"
+  output << 'Files with complete coverage (100%):'
+  output << ('-' * 60)
+  complete_files.each do |file, data|
+    output << "✓ #{file}: #{data[:covered]} lines"
   end
+  output
+end
+
+def format_recommendations_section(impact_files)
+  return [] if impact_files.empty?
+
+  output = []
+  output << "\n#{'=' * 60}"
+  output << 'Recommendations:'
+  output << ('-' * 60)
+  output << 'Focus on these files for maximum coverage improvement:'
+  impact_files.each_with_index do |(file, data), i|
+    output << "#{i + 1}. #{file}: #{data[:total] - data[:covered]} uncovered lines (currently #{data[:percentage]}%)"
+  end
+  output
+end
+
+def format_human_output(stats)
+  files = stats[:files]
+  overall = stats[:overall]
+  total_lines = stats[:total_lines]
+  total_covered = stats[:total_covered]
+  incomplete_files = stats[:incomplete_files]
+  complete_files = stats[:complete_files]
+  impact_files = stats[:impact_files]
+  output = []
+
+  output << 'Coverage Analysis for train-juniper'
+  output << ('=' * 60)
+  output << ''
+
+  output.concat(format_incomplete_files_section(incomplete_files))
+  output.concat(format_complete_files_section(complete_files))
 
   output << "\n#{'=' * 60}"
   output << 'Overall Coverage Statistics:'
@@ -153,21 +206,65 @@ def format_human_output(files, overall, total_lines, total_covered, incomplete_f
               "\n⚠️  Coverage below 80% industry standard"
             end
 
-  if impact_files.any?
-    output << "\n#{'=' * 60}"
-    output << 'Recommendations:'
-    output << ('-' * 60)
-    output << 'Focus on these files for maximum coverage improvement:'
-    impact_files.each_with_index do |(file, data), i|
-      uncovered = data[:total] - data[:covered]
-      output << "#{i + 1}. #{file}: #{uncovered} uncovered lines (currently #{data[:percentage]}%)"
-    end
-  end
+  output.concat(format_recommendations_section(impact_files))
 
   output.join("\n")
 end
 
-def format_json_output(files, overall, total_lines, total_covered, incomplete_files, complete_files, impact_files)
+def format_markdown_incomplete_section(incomplete_files)
+  return [] if incomplete_files.empty?
+
+  output = []
+  output << '## Files Needing Coverage Improvements'
+  output << ''
+  output << '| File | Coverage | Lines | Uncovered Lines |'
+  output << '|------|----------|-------|-----------------|'
+  incomplete_files.each do |file, data|
+    uncovered_summary = data[:uncovered].take(5).join(', ')
+    uncovered_summary += '...' if data[:uncovered].length > 5
+    output << "| `#{file}` | #{data[:percentage]}% | #{data[:covered]}/#{data[:total]} | #{uncovered_summary} |"
+  end
+  output << ''
+  output
+end
+
+def format_markdown_complete_section(complete_files)
+  return [] if complete_files.empty?
+
+  output = []
+  output << '## Files with Complete Coverage (100%)'
+  output << ''
+  output << '| File | Lines Covered |'
+  output << '|------|---------------|'
+  complete_files.each do |file, data|
+    output << "| ✅ `#{file}` | #{data[:covered]} |"
+  end
+  output << ''
+  output
+end
+
+def format_json_output(stats)
+  files = stats[:files]
+  overall = stats[:overall]
+  total_lines = stats[:total_lines]
+  total_covered = stats[:total_covered]
+  incomplete_files = stats[:incomplete_files]
+  complete_files = stats[:complete_files]
+  impact_files = stats[:impact_files]
+
+  # Sort files separately to avoid multiline block chain
+  sorted_files = files.map do |name, data|
+    {
+      name: name,
+      path: data[:full_path],
+      percentage: data[:percentage],
+      covered: data[:covered],
+      total: data[:total],
+      uncovered_lines: data[:uncovered]
+    }
+  end
+  sorted_files.sort_by! { |f| f[:percentage] }
+
   result = {
     overall: {
       percentage: overall,
@@ -177,16 +274,7 @@ def format_json_output(files, overall, total_lines, total_covered, incomplete_fi
       files_complete: complete_files.count,
       files_incomplete: incomplete_files.count
     },
-    files: files.map do |name, data|
-      {
-        name: name,
-        path: data[:full_path],
-        percentage: data[:percentage],
-        covered: data[:covered],
-        total: data[:total],
-        uncovered_lines: data[:uncovered]
-      }
-    end.sort_by { |f| f[:percentage] },
+    files: sorted_files,
     recommendations: impact_files.map do |file, data|
       {
         file: file,
@@ -200,7 +288,14 @@ def format_json_output(files, overall, total_lines, total_covered, incomplete_fi
   JSON.pretty_generate(result)
 end
 
-def format_markdown_output(files, overall, total_lines, total_covered, incomplete_files, complete_files, impact_files)
+def format_markdown_output(stats)
+  files = stats[:files]
+  overall = stats[:overall]
+  total_lines = stats[:total_lines]
+  total_covered = stats[:total_covered]
+  incomplete_files = stats[:incomplete_files]
+  complete_files = stats[:complete_files]
+  impact_files = stats[:impact_files]
   output = []
 
   output << '# Coverage Analysis for train-juniper'
@@ -219,29 +314,8 @@ def format_markdown_output(files, overall, total_lines, total_covered, incomplet
   output << "| Files Needing Work | #{incomplete_files.count} |"
   output << ''
 
-  if incomplete_files.any?
-    output << '## Files Needing Coverage Improvements'
-    output << ''
-    output << '| File | Coverage | Lines | Uncovered Lines |'
-    output << '|------|----------|-------|-----------------|'
-    incomplete_files.each do |file, data|
-      uncovered_summary = data[:uncovered].take(5).join(', ')
-      uncovered_summary += '...' if data[:uncovered].length > 5
-      output << "| `#{file}` | #{data[:percentage]}% | #{data[:covered]}/#{data[:total]} | #{uncovered_summary} |"
-    end
-    output << ''
-  end
-
-  if complete_files.any?
-    output << '## Files with Complete Coverage (100%)'
-    output << ''
-    output << '| File | Lines Covered |'
-    output << '|------|---------------|'
-    complete_files.each do |file, data|
-      output << "| ✅ `#{file}` | #{data[:covered]} |"
-    end
-    output << ''
-  end
+  output.concat(format_markdown_incomplete_section(incomplete_files))
+  output.concat(format_markdown_complete_section(complete_files))
 
   if impact_files.any?
     output << '## Recommendations'
