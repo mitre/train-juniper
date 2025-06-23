@@ -80,7 +80,6 @@ nav:
     - Documentation Guide: DOCUMENTATION_GUIDE.md
     - Release Process: RELEASE_PROCESS.md
     - Code of Conduct: CODE_OF_CONDUCT.md
-    - Security Policy: SECURITY.md
   - Release Notes:
     - v0.7.0: release-notes/v0.7.0.md
     - v0.6.2: release-notes/v0.6.2.md
@@ -96,6 +95,7 @@ nav:
   - About:
     - License: LICENSE.md
     - Notice: NOTICE.md
+    - Security Policy: SECURITY.md
     - Changelog: CHANGELOG.md
     - Roadmap: ROADMAP.md
     - Coverage Report: coverage-report.md
