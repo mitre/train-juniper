@@ -1,0 +1,22 @@
+name: train-juniper-crpd
+
+mgmt:
+  network: train-crpd-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  nodes:
+    crpd1:
+      kind: crpd
+      image: arm64v8/crpd:24.4R1.9
+      mgmt-ipv4: 172.20.20.10
+      ports:
+        - "2022:22"    # SSH
+        - "2830:830"   # NETCONF
+      binds:
+        - crpd-config/juniper.conf:/config/juniper.conf:ro
+      env:
+        JUNIPER_USERCLASS: "super-user"
+        JUNIPER_USERNAME: "admin"
+        JUNIPER_PASSWORD: "admin123"
+        JUNIPER_ENCRYPT: "plain-text"

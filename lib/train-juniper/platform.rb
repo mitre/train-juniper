@@ -5,16 +5,19 @@
 
 module TrainPlugins::Juniper
   # Platform detection mixin for Juniper network devices
+  # @note This module is mixed into the Connection class to provide platform detection
   module Platform
     # Platform name constant for consistency
     PLATFORM_NAME = 'juniper'
 
     # Platform detection for Juniper network devices
-    #
-    # For dedicated transport plugins, we use force_platform! to bypass
-    # Train's automatic platform detection, which might run commands before
-    # the connection is ready. This is the standard pattern used by official
-    # Train plugins like train-k8s-container.
+    # @return [Train::Platform] Platform object with JunOS details
+    # @note Uses force_platform! to bypass Train's automatic detection
+    # @example
+    #   platform = connection.platform
+    #   platform.name     #=> "juniper"
+    #   platform.release  #=> "12.1X47-D15.4"
+    #   platform.arch     #=> "x86_64"
     def platform
       # Return cached platform if already computed
       return @platform if defined?(@platform)
@@ -46,6 +49,10 @@ module TrainPlugins::Juniper
     private
 
     # Generic detection helper for version and architecture
+    # @param attribute_name [String] Name of the attribute to detect
+    # @param command [String] Command to run (default: 'show version')
+    # @yield [String] Block that extracts the attribute from command output
+    # @return [String, nil] Detected attribute value or nil
     def detect_attribute(attribute_name, command = 'show version', &extraction_block)
       cache_var = "@detected_#{attribute_name}"
       return instance_variable_get(cache_var) if instance_variable_defined?(cache_var)
@@ -82,12 +89,15 @@ module TrainPlugins::Juniper
     end
 
     # Detect JunOS version from device output
-    # This runs safely after the connection is established
+    # @return [String, nil] JunOS version string or nil if not detected
+    # @note This runs safely after the connection is established
     def detect_junos_version
       detect_attribute('junos_version') { |output| extract_version_from_output(output) }
     end
 
     # Extract version string from JunOS show version output
+    # @param output [String] Raw output from 'show version' command
+    # @return [String, nil] Extracted version string or nil
     def extract_version_from_output(output)
       return nil if output.nil? || output.empty?
 
@@ -109,12 +119,15 @@ module TrainPlugins::Juniper
     end
 
     # Detect JunOS architecture from device output
-    # This runs safely after the connection is established
+    # @return [String, nil] Architecture string or nil if not detected
+    # @note This runs safely after the connection is established
     def detect_junos_architecture
       detect_attribute('junos_architecture') { |output| extract_architecture_from_output(output) }
     end
 
     # Extract architecture string from JunOS show version output
+    # @param output [String] Raw output from 'show version' command
+    # @return [String, nil] Architecture string (x86_64, arm64, etc.) or nil
     def extract_architecture_from_output(output)
       return nil if output.nil? || output.empty?
 

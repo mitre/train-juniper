@@ -72,6 +72,9 @@ nav:
   - Getting Started:
     - Installation: installation.md
     - Basic Usage: basic-usage.md
+    - Windows Setup: windows-setup.md
+  - API Reference:
+    - API Documentation: api-documentation.md
   - Contributing:
     - Contributing Guide: CONTRIBUTING.md
     - Documentation Guide: DOCUMENTATION_GUIDE.md
@@ -101,3 +104,7 @@ extra:
       link: https://github.com/mitre/train-juniper
   version:
     provider: mike
+
+# Exclude YARD-generated API docs from MkDocs processing
+exclude_docs: |
+  api/

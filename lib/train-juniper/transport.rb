@@ -7,6 +7,13 @@ require 'train-juniper/connection'
 
 module TrainPlugins
   module Juniper
+    # Transport plugin for Juniper JunOS devices
+    # @example Create a connection
+    #   conn = Train.create('juniper',
+    #     host: '192.168.1.1',
+    #     user: 'admin',
+    #     password: 'secret'
+    #   )
     class Transport < Train.plugin(1)
       name 'juniper'
 
@@ -45,6 +52,11 @@ module TrainPlugins
       option :disable_complete_on_space, default: false
 
       # Create and return a connection to a Juniper device
+      # @param _instance_opts [Hash] Instance options (unused, for compatibility)
+      # @return [TrainPlugins::Juniper::Connection] Cached connection instance
+      # @example
+      #   transport = TrainPlugins::Juniper::Transport.new(options)
+      #   conn = transport.connection
       def connection(_instance_opts = nil)
         # Cache the connection instance for reuse
         # @options contains parsed connection details from train URI

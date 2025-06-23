@@ -1,0 +1,6 @@
+Exit Status: 1
+STDOUT:
+
+STDERR:
+
+error: syntax error, expecting <command>: missing-config

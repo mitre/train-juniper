@@ -1,0 +1,33 @@
+<rpc-reply xmlns:junos="http://xml.juniper.net/junos/23.4R1.9/junos">
+    <snmp-v3-information xmlns="http://xml.juniper.net/junos/23.4R0/junos-snmp">
+        <snmp-v3-general-information>
+            <snmp-v3-engine-information>
+                <engine-id>80 00 0a 4c 01 c0 a8 01 01 </engine-id>
+                <engine-boots>2</engine-boots>
+                <engine-time>2592933</engine-time>
+                <max-msg-size>65507</max-msg-size>
+            </snmp-v3-engine-information>
+        </snmp-v3-general-information>
+        <snmp-v3-usm-user-information>
+        </snmp-v3-usm-user-information>
+        <snmp-v3-group-information>
+        </snmp-v3-group-information>
+        <snmp-v3-access-information junos:style="brief">
+        </snmp-v3-access-information>
+        <snmp-v3-target-information xmlns="http://xml.juniper.net/junos/23.4R0/junos-snmp">
+            <snmp-v3-target-address-information xmlns="http://xml.juniper.net/junos/23.4R0/junos-snmp">
+            </snmp-v3-target-address-information>
+            <snmp-v3-target-parameters-information xmlns="http://xml.juniper.net/junos/23.4R0/junos-snmp">
+            </snmp-v3-target-parameters-information>
+        </snmp-v3-target-information>
+        <snmp-v3-notify-information>
+        </snmp-v3-notify-information>
+        <snmp-v3-notify-filter-information>
+        </snmp-v3-notify-filter-information>
+        <snmp-v3-community-information>
+        </snmp-v3-community-information>
+    </snmp-v3-information>
+    <cli>
+        <banner></banner>
+    </cli>
+</rpc-reply>

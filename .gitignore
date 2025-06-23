@@ -73,3 +73,19 @@ TODO-MATRIX.md
 
 # InSpec resource pack (separate project)
 inspec-resources/
+
+# STIG analysis scripts and data (part of inspec-resources work)
+*stig*.json
+*stig*.txt
+analyze_*.rb
+quick_*.rb
+fetch_*.rb
+
+# YARD documentation artifacts
+.yardoc/
+docs/api/
+
+# Planning and internal documentation
+IMMEDIATE_ACTION_PLAN.md
+recovery-prompt-bug-fix.md
+recovery-prompt-resource-pack-scope.md

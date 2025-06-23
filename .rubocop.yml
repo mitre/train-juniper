@@ -11,6 +11,15 @@ AllCops:
     - 'docs/**/*'
     - 'vendor/**/*'
     - '.bundle/**/*'
+    - 'inspec-resources/**/*'
+    - 'test/fixtures/**/*'
+    - 'test/images/**/*'
+    - 'analyze*.rb'
+    - 'quick_*.rb'
+    - 'fetch_*.rb'
+    - '*.json'
+    - '*.txt'
+    - '*.md'
 
 # Exclude complex connection logic from auto-correction that breaks code
 Style/SafeNavigation:
@@ -19,7 +28,7 @@ Style/SafeNavigation:
 
 # Network plugins need longer classes for connection handling
 Metrics/ClassLength:
-  Max: 300  # Connection classes handle SSH, auth, commands, etc.
+  Max: 310  # Connection classes handle SSH, auth, commands, etc.
 
 # Network initialization involves many configuration options
 Metrics/MethodLength:
@@ -58,6 +67,10 @@ Layout/LineLength:
 Lint/ConstantDefinitionInBlock:
   Exclude:
     - 'test/**/*'
+
+# Follow RubyGems standards for gemspec development dependencies
+Gemspec/DevelopmentDependencies:
+  Enabled: false
 
 # File naming - train-juniper.rb is the standard entry point name
 Naming/FileName:

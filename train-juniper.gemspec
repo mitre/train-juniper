@@ -70,4 +70,20 @@ Gem::Specification.new do |spec|
   # FFI dependency - required by train-core
   # Match InSpec 7's FFI version range for compatibility
   spec.add_dependency 'ffi', '>= 1.15.5', '< 1.17.0'
+
+  # Development dependencies
+  spec.add_development_dependency 'bundler', '~> 2.0'
+  spec.add_development_dependency 'byebug', '~> 11.1'
+  spec.add_development_dependency 'minitest', '~> 5.0'
+  spec.add_development_dependency 'mocha', '~> 2.0'
+  spec.add_development_dependency 'rake', '~> 13.0'
+  spec.add_development_dependency 'rubocop', '~> 1.0'
+  spec.add_development_dependency 'simplecov', '~> 0.22'
+  spec.add_development_dependency 'yard', '~> 0.9'
+
+  # Security testing
+  spec.add_development_dependency 'bundler-audit', '~> 0.9'
+
+  # Documentation generation
+  spec.add_development_dependency 'redcarpet', '~> 3.5'
 end

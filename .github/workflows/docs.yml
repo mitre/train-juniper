@@ -35,6 +35,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -52,6 +58,10 @@ jobs:
       - name: Build documentation
         run: |
           mkdocs build --clean
+          
+      - name: Build and integrate YARD API documentation
+        run: |
+          bundle exec yard doc --output-dir site/api --no-private
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

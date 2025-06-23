@@ -1,0 +1,62 @@
+[
+  {
+    "id": "V-214518",
+    "stig": "ALG",
+    "check_text": "If user-based firewall policies are not used, this is Not Applicable.\n\nTo verify the existence of user-based firewall policies, view a summary of all policies configured on the firewall.\n\n[edit]\nshow security policies\n\nIf the source identity is not specified in any policy for a particular zone pair, this is a finding.",
+    "fix_text": "Configure attribute-based security policies to enforce approved authorizations for logical access to information and system resources using the following commands.\n\nTo configure redirection from the SRX Series device to the Access Control Service, from configuration mode, configure the UAC profile for the captive portal <acs-device>.\n\n[edit]\nset services unified-access-control captive-portal <acs-device-name> redirect-traffic unauthenticated\n\nConfigure the redirection URL for the Access Control Service or a default URL for the captive portal.\n\n[edit]\nset services unified-access-control captive-portal acs-device redirect-url https://%ic-url%/?target=%dest-url%&enforcer=%enforcer-id%\n\nThis policy specifies the default target and enforcer variables to be used by the Access Control Service to direct the user back after authentication. This ensures that changes to system specifications will not affect configuration results.\n\nConfigure a user role firewall policy that redirects HTTP traffic from zone trust to zone untrust if the source-identity is unauthenticated-user. The captive portal profile name is specified as the action to be taken for traffic matching this policy. The following is an example only since there the actual policy is dependent on the architecture of the organization's network.\n\n[edit]\nset security policies from-zone trust to-zone untrust policy user-role-fw1 match source-address any\nset security policies from-zone trust to-zone untrust policy user-role-fw1 match destination-address any\nset security policies from-zone trust to-zone untrust policy user-role-fw1 match application http\nset security policies from-zone trust to-zone untrust policy user-role-fw1 match source-identity unauthenticated-user\nset security policies from-zone trust to-zone untrust policy user-role-fw1 then permit app"
+  },
+  {
+    "id": "V-214519",
+    "stig": "ALG",
+    "check_text": "To verify what is logged in the Syslog, view the Syslog server (Syslog server configuration is out of scope for this STIG); however, the reviewer must also verify that packets are being logged to the local log using the following commands.\n\nFrom operational mode, enter the following command.\n\nshow firewall log\n\nView the Action column; the configured action of the term matches the action taken on the packet: A (accept), D (discard).\n\nIf events in the log do not reflect the action taken on the packet, this is a finding.",
+    "fix_text": "Include the log and/or syslog action in all term to log packets matching each firewall term to ensure the term results are recorded in the firewall log and Syslog. To get traffic logs from permitted sessions, add \"then log session-close\" to each policy. To get traffic logs from denied sessions, add \"then log session-init\" to the policy.\n\nFirewall filter:\n[edit]\nset firewall family <family name> filter <filter_name> term <term_name> then log\n\nExamples: \nset firewall family inet filter protect_re term tcp-connection then syslog\nset firewall family inet filter protect_re term tcp-connection then log\nset firewall family inet filter ingress-filter-v4 term deny-dscp then log\nset firewall family inet filter ingress-filter-v4 term deny-dscp then syslog\n\nSecurity policy and security screens:\nset security policies from-zone <zone_name> to-zone <zone_name> policy <policy_name> then log\n\nExample:\nset security policies from-zone untrust to-zone trust policy default-deny then log"
+  },
+  {
+    "id": "V-214520",
+    "stig": "ALG",
+    "check_text": "To verify what is logged in the Syslog, view the Syslog server (Syslog server configuration is out of scope for this STIG); however, the reviewer must also verify that packets are being logged to the local log using the following commands.\n\nFrom operational mode, enter the following command.\n\nshow firewall log\n\nView the Action column; the configured action of the term matches the action taken on the packet: A (accept), D (discard).\n\nIf events in the log do not reflect the action taken on the packet, this is a finding.",
+    "fix_text": "Include the log and/or syslog action in all zone configurations to log attempts to access zones. To get traffic logs from permitted sessions, add \"then log session-close\" to the policy. To get traffic logs from denied sessions, add \"then log session-init\" to the policy.\n\nset security policies from-zone <zone_name> to-zone <zone_name> policy <policy_name> then log\n\nExample:\nset security policies from-zone untrust to-zone trust policy default-deny then log"
+  },
+  {
+    "id": "V-214521",
+    "stig": "ALG",
+    "check_text": "To verify that traffic logs are being sent to the syslog server, check the syslog server files. \n\nIf traffic logs are not being sent to the syslog server, this is a finding.",
+    "fix_text": "Logging for security-related sources such as screens and security policies must be configured separately. \n\nThe following example specifies that security log messages in structured-data format (syslog format) are sent from the source <MGT IP address> (e.g., the SRX's loopback or other interface IP address) to an external syslog server.\n\n[edit]\nset security log cache\nset security log format syslog\nset security log source-address <MGT IP Address>\nset security log stream <stream name> host <syslog server IP Address>\n\nTo get traffic logs from permitted sessions, add \"then log session-close\" to the policy.\nTo get traffic logs from denied sessions, add \"then log session-init\" to the policy. Enable Logging on Security Policies:\n\n[edit]\nset security policies from-zone <zone-name> to-zone <zone-name> policy <policy-name> then log <event>\n\nExample to log session init and session close events:\nset security policies from-zone trust to-zone untrust policy default-permit then log session-init\nset security policies from-zone trust to-zone untrust policy default-permit then log session-close"
+  },
+  {
+    "id": "V-214522",
+    "stig": "ALG",
+    "check_text": "Verify logging has been enabled and configured.\n\n[edit] \nshow log <LOG-NAME> match \"RT_FLOW_SESSION\"\n\nIf a local log file or files is not configured to capture \"RT_FLOW_SESSION\" events, this is a finding.",
+    "fix_text": "The following example commands configure local backup files to capture DoD-defined auditable events. \n\n[edit]\nset system syslog file <LOG-NAME> any info\nset system syslog file <LOG-NAME> match \"RT_FLOW_SESSION \"\n\nExample:\nset system syslog file<LOG-NAME> match \"RT_FLOW_SESSION \""
+  },
+  {
+    "id": "V-223180",
+    "stig": "NDM",
+    "check_text": "Verify the Juniper SRX sets a connection-limit for the SSH protocol.\n\nShow system services ssh\n\nIf the SSH connection-limit is not set to 10 or less, this is a finding.",
+    "fix_text": "Configure the SSH protocol to limit connection and sessions per connection.\n\n[edit]\nset system services ssh connection-limit 10\nset system services ssh max-sessions-per-connection 1"
+  },
+  {
+    "id": "V-223181",
+    "stig": "NDM",
+    "check_text": "Verify the device logs change-log events of severity info or any to an external syslog server.\n\n[edit]\nshow system syslog\n\nhost <syslog server address> {\n  any <info | any>;\n  source-address <device address>;\n}\n\n-OR-\n\nhost <syslog server address> {\n  change-log <info | any>;\n  source-address <device address>;\n}\n\nIf an external syslog host is not configured to log facility change-log severity <info | any>, or configured for facility any severity <info | any>, this is a finding.",
+    "fix_text": "Configure at least one external syslog host is configured to log facility change-log or any, and severity info or any. \n\n[edit system syslog]\nset host <syslog server address> any <info | any> \n\n -OR-\n\n[edit]\nset host <syslog server address> change-log <info | any>"
+  },
+  {
+    "id": "V-223182",
+    "stig": "NDM",
+    "check_text": "Verify the device logs change-log events of severity info or any to an external syslog server.\n\n[edit]\nshow system syslog\n\nhost <syslog server address> {\n  any <info | any>;\n  source-address <device address>;\n}\n\n-OR-\n\nhost <syslog server address> {\n  change-log <info | any>;\n  source-address <device address>;\n}\n\nIf an external syslog host is not configured to log facility change-log severity <info | any>, or configured for facility any severity <info | any>, this is a finding.",
+    "fix_text": "Configure at least one external syslog host is configured to log facility change-log or any, and severity info or any. \n\n[edit system syslog]\nset host <syslog server address> any <info | any> \n\n -OR-\n\n[edit]\nset host <syslog server address> change-log <info | any>"
+  },
+  {
+    "id": "V-223183",
+    "stig": "NDM",
+    "check_text": "Verify the device logs change-log events of severity info or any to an external syslog server.\n\n[edit]\nshow system syslog\n\nhost <syslog server address> {\n  any <info | any>;\n  source-address <device address>;\n}\n\n-OR-\n\nhost <syslog server address> {\n  change-log <info | any>;\n  source-address <device address>;\n}\n\nIf an external syslog host is not configured to log facility change-log severity <info | any>, or configured for facility any severity <info | any>, this is a finding.",
+    "fix_text": "Configure at least one external syslog host is configured to log facility change-log or any, and severity info or any. \n\n[edit system syslog]\nset host <syslog server address> any <info | any> \n\n -OR-\n\n[edit]\nset host <syslog server address> change-log <info | any>"
+  },
+  {
+    "id": "V-223184",
+    "stig": "NDM",
+    "check_text": "Verify the device logs change-log events of severity info or any to an external syslog server.\n\n[edit]\nshow system syslog\n\nhost <syslog server address> {\n  any <info | any>;\n  source-address <device address>;\n}\n\n-OR-\n\nhost <syslog server address> {\n  change-log <info | any>;\n  source-address <device address>;\n}\n\nIf an external syslog host is not configured to log facility change-log severity <info | any>, or configured for facility any severity <info | any>, this is a finding.",
+    "fix_text": "Configure at least one external syslog host is configured to log facility change-log or any, and severity info or any. \n\n[edit system syslog]\nset host <syslog server address> any <info | any> \n\n -OR-\n\n[edit]\nset host <syslog server address> change-log <info | any>"
+  }
+]

@@ -218,7 +218,7 @@ describe TrainPlugins::Juniper::Connection do
     end
 
     it 'should validate port range' do
-      options = mock_options.merge(port: 70000)
+      options = mock_options.merge(port: 70_000)
       err = _(-> { connection_class.new(options) }).must_raise(Train::ClientError)
       _(err.message).must_match(/Invalid port.*must be 1-65535/)
     end
@@ -253,7 +253,7 @@ describe TrainPlugins::Juniper::Connection do
         'show configuration | display set',
         'show configuration | match "interface"'
       ]
-      
+
       safe_commands.each do |cmd|
         result = connection.run_command(cmd)
         _(result).must_be_kind_of(Train::Extras::CommandResult)
@@ -270,7 +270,7 @@ describe TrainPlugins::Juniper::Connection do
         'show version `evil`',
         'show version $(evil)'
       ]
-      
+
       dangerous_commands.each do |cmd|
         err = _(-> { connection.run_command(cmd) }).must_raise(Train::ClientError)
         _(err.message).must_match(/Invalid characters in command/)
@@ -284,7 +284,7 @@ describe TrainPlugins::Juniper::Connection do
     it 'should block invalid escape sequences but allow valid ones' do
       # Should block invalid escapes
       _(-> { connection.run_command('show version \x00') }).must_raise(Train::ClientError)
-      
+
       # Should allow valid escapes like \n, \r, \t (though unusual in commands)
       result = connection.run_command('show configuration | match "test\n"')
       _(result).must_be_kind_of(Train::Extras::CommandResult)
@@ -322,7 +322,7 @@ describe TrainPlugins::Juniper::Connection do
       require 'stringio'
       log_output = StringIO.new
       logger = Logger.new(log_output)
-      
+
       sensitive_options = {
         host: 'test.device',
         user: 'admin',
@@ -333,19 +333,62 @@ describe TrainPlugins::Juniper::Connection do
         mock: true,
         logger: logger
       }
-      
+
       connection_class.new(sensitive_options)
       log_content = log_output.string
-      
+
       # Should not contain sensitive information
       _(log_content).wont_match(/super_secret_password/)
       _(log_content).wont_match(/bastion_secret/)
-      _(log_content).wont_match(/\/path\/to\/key/)
+      _(log_content).wont_match(%r{/path/to/key})
       _(log_content).wont_match(/ssh -W/)
-      
+
       # Should contain safe information
       _(log_content).must_match(/test\.device/)
       _(log_content).must_match(/admin/)
+    end
+  end
+
+  describe 'file transfer operations' do
+    let(:connection) { TrainPlugins::Juniper::Connection.new(mock_options) }
+
+    it 'raises NotImplementedError for upload' do
+      err = _(proc { connection.upload('local.txt', 'remote.txt') }).must_raise NotImplementedError
+      _(err.message).must_match(/does not implement #upload/)
+    end
+
+    it 'raises NotImplementedError for download' do
+      err = _(proc { connection.download('remote.txt', 'local.txt') }).must_raise NotImplementedError
+      _(err.message).must_match(/does not implement #download/)
+    end
+  end
+
+  describe '#file_via_connection' do
+    let(:connection) { TrainPlugins::Juniper::Connection.new(mock_options) }
+
+    it 'returns a JuniperFile instance' do
+      file = connection.file_via_connection('/config/interfaces')
+      _(file).must_be_instance_of TrainPlugins::Juniper::JuniperFile
+    end
+  end
+
+  describe '#to_s' do
+    let(:connection) { TrainPlugins::Juniper::Connection.new(mock_options) }
+
+    it 'returns secure string representation without credentials' do
+      str = connection.to_s
+      _(str).must_match(/TrainPlugins::Juniper::Connection/)
+      _(str).must_match(/@host=test-router/) # Mock uses test-router, not 192.168.1.1
+      _(str).must_match(/@user=admin/)
+      _(str).wont_match(/password/)
+    end
+  end
+
+  describe '#inspect' do
+    let(:connection) { TrainPlugins::Juniper::Connection.new(mock_options) }
+
+    it 'returns same as to_s for security' do
+      _(connection.inspect).must_equal connection.to_s
     end
   end
 end

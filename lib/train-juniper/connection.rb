@@ -42,6 +42,17 @@ module TrainPlugins
         proxy_command: { env: 'JUNIPER_PROXY_COMMAND' }
       }.freeze
 
+      # Initialize a new Juniper connection
+      # @param options [Hash] Connection options
+      # @option options [String] :host The hostname or IP address of the Juniper device
+      # @option options [String] :user The username for authentication
+      # @option options [String] :password The password for authentication (optional if using key_files)
+      # @option options [Integer] :port The SSH port (default: 22)
+      # @option options [Integer] :timeout Connection timeout in seconds (default: 30)
+      # @option options [String] :bastion_host Jump/bastion host for connection
+      # @option options [String] :proxy_command SSH proxy command
+      # @option options [Logger] :logger Custom logger instance
+      # @option options [Boolean] :mock Enable mock mode for testing
       def initialize(options)
         # Configure SSH connection options for Juniper devices
         # Support environment variables for authentication (following train-vsphere pattern)
@@ -110,13 +121,20 @@ module TrainPlugins
         JuniperFile.new(self, path)
       end
 
-      # File transfer operations (following network device pattern)
-      # Network devices don't support traditional file upload/download
-      # Use run_command() for configuration management instead
+      # Upload files to Juniper device (not supported)
+      # @param locals [String, Array<String>] Local file path(s)
+      # @param remote [String] Remote destination path
+      # @raise [NotImplementedError] Always raises as uploads are not supported
+      # @note Network devices use command-based configuration instead of file uploads
       def upload(locals, remote)
         raise NotImplementedError, "#{self.class} does not implement #upload() - network devices use command-based configuration"
       end
 
+      # Download files from Juniper device (not supported)
+      # @param remotes [String, Array<String>] Remote file path(s)
+      # @param local [String] Local destination path
+      # @raise [NotImplementedError] Always raises as downloads are not supported
+      # @note Use run_command() to retrieve configuration data instead
       def download(remotes, local)
         raise NotImplementedError, "#{self.class} does not implement #download() - use run_command() to retrieve configuration data"
       end
@@ -131,7 +149,7 @@ module TrainPlugins
       def run_command_via_connection(cmd)
         # Sanitize command to prevent injection
         safe_cmd = sanitize_command(cmd)
-        
+
         return mock_command_result(safe_cmd) if @options[:mock]
 
         begin
@@ -176,6 +194,8 @@ module TrainPlugins
         keys_only: ->(opts) { opts[:keys_only] if opts[:key_files] }
       }.freeze
 
+      # Default SSH options for Juniper connections
+      # @note verify_host_key is set to :never for network device compatibility
       SSH_DEFAULTS = {
         verify_host_key: :never
       }.freeze
@@ -206,21 +226,22 @@ module TrainPlugins
       #   end
       def healthy?
         return false unless connected?
-        
+
         result = run_command_via_connection('show version')
         result.exit_status.zero?
       rescue StandardError
         false
       end
 
-      private
-
       # List of sensitive option keys to redact in logs
       SENSITIVE_OPTIONS = %i[password bastion_password key_files proxy_command].freeze
+      private_constant :SENSITIVE_OPTIONS
+
+      private
 
       # Log connection info without exposing sensitive data
       def log_connection_info
-        safe_options = @options.reject { |k, _| SENSITIVE_OPTIONS.include?(k) }
+        safe_options = @options.except(*SENSITIVE_OPTIONS)
         @logger.debug("Juniper connection initialized with options: #{safe_options.inspect}")
         @logger.debug("Environment: JUNIPER_BASTION_USER=#{env_value('JUNIPER_BASTION_USER')} -> bastion_user=#{@options[:bastion_user]}")
       end
@@ -228,11 +249,11 @@ module TrainPlugins
       # Sanitize command to prevent injection attacks
       def sanitize_command(cmd)
         cmd_str = cmd.to_s.strip
-        
+
         if DANGEROUS_COMMAND_PATTERNS.any? { |pattern| cmd_str.match?(pattern) }
           raise Train::ClientError, "Invalid characters in command: #{cmd_str.inspect}"
         end
-        
+
         cmd_str
       end
 
@@ -428,25 +449,19 @@ module TrainPlugins
       # Validate port is in valid range
       def validate_port!
         port = @options[:port].to_i
-        unless port.between?(1, 65535)
-          raise Train::ClientError, "Invalid port: #{@options[:port]} (must be 1-65535)"
-        end
+        raise Train::ClientError, "Invalid port: #{@options[:port]} (must be 1-65535)" unless port.between?(1, 65_535)
       end
 
       # Validate timeout is positive number
       def validate_timeout!
         timeout = @options[:timeout]
-        unless timeout.is_a?(Numeric) && timeout.positive?
-          raise Train::ClientError, "Invalid timeout: #{timeout} (must be positive number)"
-        end
+        raise Train::ClientError, "Invalid timeout: #{timeout} (must be positive number)" unless timeout.is_a?(Numeric) && timeout.positive?
       end
 
       # Validate bastion port is in valid range
       def validate_bastion_port!
         port = @options[:bastion_port].to_i
-        unless port.between?(1, 65535)
-          raise Train::ClientError, "Invalid bastion_port: #{@options[:bastion_port]} (must be 1-65535)"
-        end
+        raise Train::ClientError, "Invalid bastion_port: #{@options[:bastion_port]} (must be 1-65535)" unless port.between?(1, 65_535)
       end
 
       # Validate proxy configuration options (Train standard)
@@ -535,11 +550,19 @@ module TrainPlugins
 
     # File abstraction for Juniper configuration and operational data
     class JuniperFile
+      # Initialize a new JuniperFile
+      # @param connection [Connection] The Juniper connection instance
+      # @param path [String] The virtual file path
       def initialize(connection, path)
         @connection = connection
         @path = path
       end
 
+      # Get the content of the virtual file
+      # @return [String] The command output based on the path
+      # @example
+      #   file = connection.file('/config/interfaces')
+      #   file.content  # Returns output of 'show configuration interfaces'
       def content
         # For Juniper devices, translate file paths to appropriate commands
         case @path

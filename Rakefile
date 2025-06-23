@@ -33,14 +33,8 @@ end
 require 'rubocop/rake_task'
 
 RuboCop::RakeTask.new(:lint) do |t|
-  # Choices of rubocop rules to enforce are deeply personal.
-  # Here, we set things up so that your plugin will use the Bundler-installed
-  # train gem's copy of the Train project's rubocop.yml file (which
-  # is indeed packaged with the train gem).
-  require 'train/globals'
-  train_rubocop_yml = File.join(Train.src_root, '.rubocop.yml')
-
-  t.options = ['--display-cop-names', '--config', train_rubocop_yml]
+  # Use our local .rubocop.yml configuration
+  t.options = ['--display-cop-names', '--config', '.rubocop.yml']
 end
 
 #------------------------------------------------------------------#
@@ -92,6 +86,23 @@ task 'test:all' => %w[test security]
 #                    Load Additional Tasks
 #------------------------------------------------------------------#
 Dir['tasks/*.rake'].each { |f| load f }
+
+#------------------------------------------------------------------#
+#                    Documentation Tasks
+#------------------------------------------------------------------#
+begin
+  require 'yard'
+  YARD::Rake::YardocTask.new do |t|
+    t.files = ['lib/**/*.rb']
+    t.options = ['--no-private']
+    t.stats_options = ['--list-undoc']
+  end
+rescue LoadError
+  desc 'YARD documentation task'
+  task :yard do
+    puts 'YARD is not available. Run `bundle install` to install it.'
+  end
+end
 
 #------------------------------------------------------------------#
 #                    Bundler Gem Tasks

@@ -5,7 +5,7 @@
 require_relative '../helper'
 
 describe 'Security Tests' do
-  let(:connection_options) { default_mock_options() }
+  let(:connection_options) { default_mock_options }
 
   let(:connection) { TrainPlugins::Juniper::Connection.new(connection_options) }
 
