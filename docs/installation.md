@@ -34,7 +34,7 @@ inspec plugin list
 !!! success "Installation Complete"
     If you see `train-juniper` in the plugin list, you're ready to go!
 
-[Get Started with Basic Usage](basic-usage.md){ .md-button .md-button--primary }
+[Get Started with Basic Usage](basic-usage){ .md-button .md-button--primary }
 
 ### Method 2: Local Gem Installation :material-developer-board:
 
@@ -300,12 +300,12 @@ inspec detect -t juniper://admin@your-device.com
 
 ## Next Steps
 
-- **[Basic Usage](basic-usage.md)** - Learn to use the plugin
+- **[Basic Usage](basic-usage)** - Learn to use the plugin
 - **[Train Plugin Development Guide](https://github.com/mitre/train-plugin-development-guide)** - Comprehensive development documentation
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+- **[Contributing Guide](CONTRIBUTING)** - How to contribute to the project
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/mitre/train-juniper/issues)
-- **Development**: [Contributing Guide](CONTRIBUTING.md)
-- **Security**: [Security Policy](SECURITY.md)
+- **Development**: [Contributing Guide](CONTRIBUTING)
+- **Security**: [Security Policy](SECURITY)

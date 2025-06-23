@@ -146,7 +146,7 @@ Releases are managed by project maintainers:
 
 ## Community
 
-- Follow our [Code of Conduct](CODE_OF_CONDUCT.md)
+- Follow our [Code of Conduct](CODE_OF_CONDUCT)
 - Be respectful and collaborative
 - Help others learn and contribute
 

@@ -395,10 +395,10 @@ This plugin implements the Train Plugin V1 API with:
 
 ### Documentation
 
-- **[Installation Guide](installation.md)** - Complete installation instructions
-- **[Basic Usage](basic-usage.md)** - Getting started with the plugin
-- **[Release Process](RELEASE_PROCESS.md)** - How to cut releases and publish gems
-- **[Project Roadmap](ROADMAP.md)** - Future development plans and contribution opportunities
+- **[Installation Guide](installation)** - Complete installation instructions
+- **[Basic Usage](basic-usage)** - Getting started with the plugin
+- **[Release Process](RELEASE_PROCESS)** - How to cut releases and publish gems
+- **[Project Roadmap](ROADMAP)** - Future development plans and contribution opportunities
 
 ### Plugin Development Resources
 
@@ -439,12 +439,12 @@ Special thanks to the Train and InSpec communities for their excellent documenta
 
 Licensed under the Apache-2.0 license, except as noted below.
 
-See [LICENSE](LICENSE.md) for full details.
+See [LICENSE](LICENSE) for full details.
 
 ### Notice
 
 This software was produced for the U.S. Government under contract and is subject to Federal Acquisition Regulation Clause 52.227-14.
 
-See [NOTICE](NOTICE.md) for full details.
+See [NOTICE](NOTICE) for full details.
 
 © 2025 The MITRE Corporation.

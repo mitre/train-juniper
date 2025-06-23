@@ -164,7 +164,7 @@ namespace :release do # rubocop:disable Metrics/BlockLength
 
       ## Full Changelog
 
-      See the [CHANGELOG](../../CHANGELOG.md) for complete details.
+      See the [CHANGELOG](../../CHANGELOG) for complete details.
     NOTES
 
     File.write(notes_file, content)
