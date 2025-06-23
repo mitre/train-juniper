@@ -260,14 +260,18 @@ def format_markdown_incomplete_section(incomplete_files)
   return [] if incomplete_files.empty?
 
   output = []
-  output << '## Files Needing Coverage Improvements'
+  output << ''
+  output << '## :material-alert-circle: Files Needing Coverage Improvements'
+  output << ''
+  output << '!!! warning "Coverage Gaps"'
+  output << '    The following files have uncovered lines:'
   output << ''
   output << '| File | Coverage | Lines | Uncovered Lines |'
   output << '|------|----------|-------|-----------------|'
   incomplete_files.each do |file, data|
     uncovered_summary = data[:uncovered].take(5).join(', ')
     uncovered_summary += '...' if data[:uncovered].length > 5
-    output << "| `#{file}` | #{data[:percentage]}% | #{data[:covered]}/#{data[:total]} | #{uncovered_summary} |"
+    output << "| `#{file}` | **#{data[:percentage]}%** | #{data[:covered]}/#{data[:total]} | `#{uncovered_summary}` |"
   end
   output << ''
   output
@@ -277,13 +281,21 @@ def format_markdown_complete_section(complete_files)
   return [] if complete_files.empty?
 
   output = []
-  output << '## Files with Complete Coverage (100%)'
   output << ''
-  output << '| File | Lines Covered |'
-  output << '|------|---------------|'
+  output << '## :material-check-circle: Files with Complete Coverage'
+  output << ''
+  output << '!!! success "Fully Tested Files"'
+  output << '    These files have achieved 100% code coverage:'
+  output << ''
+  output << '<div class="annotate" markdown>'
+  output << ''
+  output << '| File | Lines Covered | Status |'
+  output << '|------|---------------|--------|'
   complete_files.each do |file, data|
-    output << "| ✅ `#{file}` | #{data[:covered]} |"
+    output << "| `#{file}` | #{data[:covered]} | :material-check-all:{ .mdx-pulse } |"
   end
+  output << ''
+  output << '</div>'
   output << ''
   output
 end
@@ -343,47 +355,77 @@ def format_markdown_output(stats)
   impact_files = stats[:impact_files]
   output = []
 
-  output << '# Coverage Analysis for train-juniper'
+  output << '---'
+  output << 'title: Coverage Report'
+  output << 'description: Code coverage analysis for train-juniper'
+  output << '---'
   output << ''
-  output << "Generated: #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
+  output << '# Coverage Analysis'
   output << ''
-  output << '## Overall Statistics'
+  output << "!!! info \"Report Generated\""
+  output << "    #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
   output << ''
-  output << '| Metric | Value |'
-  output << '|--------|-------|'
-  output << "| Overall Coverage | **#{overall}%** |"
-  output << "| Total Lines | #{total_lines} |"
-  output << "| Covered Lines | #{total_covered} |"
-  output << "| Files Analyzed | #{files.count} |"
-  output << "| Files with 100% | #{complete_files.count} |"
-  output << "| Files Needing Work | #{incomplete_files.count} |"
+  output << '## :material-chart-line: Overall Statistics'
   output << ''
+  output << '<div class="grid cards" markdown>'
+  output << ''
+  output << '- :material-percent: __Overall Coverage__'
+  output << ''
+  output << "    ---"
+  output << ''
+  output << "    ### **#{overall}%**"
+  output << ''
+  output << '- :material-file-document-multiple: __Code Metrics__'
+  output << ''
+  output << "    ---"
+  output << ''
+  output << "    - Total Lines: **#{total_lines}**"
+  output << "    - Covered Lines: **#{total_covered}**"
+  output << "    - Files Analyzed: **#{files.count}**"
+  output << ''
+  output << '- :material-check-all: __Coverage Status__'
+  output << ''
+  output << "    ---"
+  output << ''
+  output << "    - Files with 100%: **#{complete_files.count}**"
+  output << "    - Files Needing Work: **#{incomplete_files.count}**"
+  output << ''
+  output << '</div>'
 
   output.concat(format_markdown_incomplete_section(incomplete_files))
   output.concat(format_markdown_complete_section(complete_files))
 
   if impact_files.any?
-    output << '## Recommendations'
     output << ''
-    output << 'Focus on these files for maximum coverage improvement:'
+    output << '## :material-target: Recommendations'
+    output << ''
+    output << '!!! tip "Focus Areas"'
+    output << '    Focus on these files for maximum coverage improvement:'
     output << ''
     impact_files.each_with_index do |(file, data), i|
       uncovered = data[:total] - data[:covered]
-      output << "#{i + 1}. **#{file}**: #{uncovered} uncovered lines (currently #{data[:percentage]}%)"
-      output << "   - Lines to cover: #{data[:uncovered].join(', ')}"
+      output << "    #{i + 1}. **`#{file}`** - #{uncovered} uncovered lines (currently #{data[:percentage]}%)"
+      output << "        - Lines to cover: `#{data[:uncovered].join(', ')}`"
     end
   end
 
   output << ''
-  output << '---'
+  output << '## :material-shield-check: Coverage Assessment'
   output << ''
-  output << if overall >= 90
-              '✅ **Coverage exceeds 90% threshold - excellent!**'
-            elsif overall >= 80
-              '✅ **Coverage meets 80% industry standard**'
-            else
-              '⚠️ **Coverage below 80% industry standard**'
-            end
+  
+  if overall == 100
+    output << '!!! success "Perfect Coverage!"'
+    output << '    **100% code coverage achieved!** All code paths are tested.'
+  elsif overall >= 90
+    output << '!!! success "Excellent Coverage"'
+    output << '    **Coverage exceeds 90% threshold** - Well-tested codebase!'
+  elsif overall >= 80
+    output << '!!! info "Good Coverage"'
+    output << '    **Coverage meets 80% industry standard** - Keep improving!'
+  else
+    output << '!!! warning "Coverage Needs Improvement"'
+    output << '    **Coverage below 80% industry standard** - More tests needed.'
+  end
 
   output.join("\n")
 end
