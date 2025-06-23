@@ -98,3 +98,4 @@ test/images/**/*.tgz
 
 # Built gem packages (standard RubyGems convention)
 pkg/
+session.md
