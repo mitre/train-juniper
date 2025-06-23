@@ -1,86 +1,208 @@
+---
+title: Development Roadmap
+description: Future plans and completed milestones for train-juniper
+---
+
 # Train-Juniper Plugin Roadmap
 
-Future development plans and improvement roadmap for the train-juniper plugin.
+## :material-rocket-launch: Current Status: v0.7.1
 
-## Current Status: v0.6.2 - Production Ready
+!!! success "Production Ready"
+    Train-juniper is production-ready with **100% code coverage**, comprehensive security testing, and enterprise-grade architecture.
 
-Production-ready plugin with comprehensive testing, security infrastructure, and automated release process.
+<div class="grid cards" markdown>
 
-## Recently Completed (v0.6.x)
+- :material-check-all: __Code Quality__
 
+    ---
+
+    - **100% test coverage** achieved
+    - Zero RuboCop violations
+    - Comprehensive security testing
+    - Modern Ruby patterns
+
+- :material-shield-check: __Security First__
+
+    ---
+
+    - Command injection protection
+    - Credential sanitization
+    - Security test suite
+    - Regular dependency audits
+
+- :material-package-variant: __Enterprise Ready__
+
+    ---
+
+    - Bastion proxy support
+    - Environment configuration
+    - Comprehensive logging
+    - Mock mode for CI/CD
+
+</div>
+
+## :material-history: Recently Completed
+
+### v0.7.x Series - Architecture Excellence
+- ✅ **Modular architecture** - Complete refactoring into focused modules
+- ✅ **100% test coverage** - Achieved perfect coverage with SimpleCov
+- ✅ **DRY improvements** - Factory methods and logging helpers
+- ✅ **Security hardening** - Command sanitization and credential protection
+- ✅ **Material for MkDocs** - Beautiful documentation with coverage reports
+
+### v0.6.x Series - Production Readiness  
 - ✅ **Windows compatibility** - Fixed FFI dependency for Windows users
 - ✅ **Mock mode improvements** - Accurate platform detection in mock mode
 - ✅ **Trusted publishing** - OIDC authentication for gem releases
 - ✅ **Automated release process** - git-cliff changelog generation
 - ✅ **Ruby 3.3 support** - Updated workflows for latest Ruby
-- ✅ **Comprehensive documentation** - Installation, usage, and troubleshooting guides
 
-## Possible Future Enhancements
+## :material-road: Future Enhancements
 
-### JunOS-Specific Features
+### :material-network: Advanced Connectivity
 
-#### NETCONF Transport Option
-- Alternative connection method using NETCONF protocol (port 830)
-- Leverage `net-netconf` gem for protocol handling
-- Would allow: `inspec detect -t juniper-netconf://device:830`
-- Returns structured XML responses instead of CLI text
-- Better for automation-heavy use cases
+!!! info "NETCONF Transport"
+    Add NETCONF protocol support as an alternative to SSH
+    
+    ```bash
+    inspec detect -t juniper-netconf://device:830
+    ```
+    
+    - Structured XML responses
+    - Better for automation
+    - Uses `net-netconf` gem
+    - Industry-standard protocol
 
-#### Enhanced Command Support
-- Support for configuration mode commands (enter configure mode, make changes)
-- Commit/rollback operations support (if needed for InSpec resources)
-- Better handling of command errors and warnings
+!!! example "Connection Resilience"
+    - Automatic reconnection on drops
+    - Connection pooling for profiles
+    - Persistent session management
+    - Health check mechanisms
 
-### Connection Improvements
+### :material-code-braces: JunOS Capabilities
 
-#### Connection Reliability
-- Automatic reconnection on connection drops
-- Connection pooling for InSpec profiles with many resources (reuse SSH connection across multiple resources)
+=== "Configuration Mode"
+    - Enter configuration mode
+    - Make configuration changes
+    - Commit/rollback support
+    - Candidate configuration
 
-### Developer Experience
+=== "Advanced Commands"
+    - Operational mode extensions
+    - Custom RPC calls
+    - Error handling improvements
+    - Multi-line output parsing
+
+### :material-test-tube: Developer Experience
 
 #### Enhanced Mock Mode
-- Expand mock responses for more JunOS commands (currently supports show version, show interfaces, show configuration, etc.)
-- Support for custom mock data files (user-provided responses)
-- Mock mode for different JunOS versions/platforms (MX, EX, QFX series)
+- :material-database: Custom mock data files
+- :material-devices: Platform-specific mocks (MX, EX, QFX)
+- :material-file-tree: Expanded command coverage
+- :material-api: Mock data API
 
-#### Debugging Tools
-- Enhanced debug logging options
-- Connection troubleshooting commands
-- Performance profiling for slow commands
+#### Debugging & Performance
+- :material-bug: Advanced debug logging
+- :material-speedometer: Performance profiling
+- :material-chart-timeline: Command timing metrics
+- :material-magnify: Connection diagnostics
 
-### InSpec Resource Support
+### :material-library: InSpec Resources
 
-#### Example Resources
-- Create example InSpec resources for common JunOS checks
-- Resource pack for Juniper compliance
-- Documentation for writing custom Juniper resources
+!!! tip "Juniper Resource Pack"
+    Planned InSpec resources for common compliance checks:
+    
+    - `juniper_interface` - Network interface validation
+    - `juniper_route` - Routing table verification
+    - `juniper_firewall` - Security policy checks
+    - `juniper_user` - User account auditing
+    - `juniper_ntp` - Time synchronization
+    - `juniper_syslog` - Logging configuration
 
-### Community Contributions
+### :material-account-group: Community Wishlist
 
-We welcome contributions! Priority areas include:
-- Additional platform detection patterns for newer JunOS versions
-- Mock data for different Juniper device types (MX, EX, QFX)
-- Bug fixes and performance improvements
-- Documentation improvements
+<div class="annotate" markdown>
 
-## Contributing
+| Feature | Description | Status |
+|---------|-------------|--------|
+| BGP Support | Validate BGP configurations | :material-progress-clock: Planned |
+| OSPF Support | Check OSPF neighbor states | :material-progress-clock: Planned |
+| VLAN Validation | Verify VLAN configurations | :material-progress-clock: Planned |
+| Hardware Info | Chassis and component details | :material-progress-clock: Planned |
+| Config Diff | Compare running vs candidate | :material-progress-clock: Planned |
 
-Interested in contributing to these features? See our [Contributing Guide](CONTRIBUTING.md) for:
+</div>
 
-- Development setup instructions
-- Coding standards and patterns
-- Testing requirements
-- Pull request process
+## :material-handshake: How to Contribute
 
-## Feedback
+!!! question "Want to help?"
+    We welcome contributions in all areas! Here's how to get started:
 
-Have ideas for new features or improvements? Please:
+<div class="grid cards" markdown>
 
-- Open a [GitHub Issue](https://github.com/mitre/train-juniper/issues) for feature requests
-- Join discussions in existing issues
-- Contact the team at [saf@mitre.org](mailto:saf@mitre.org)
+- :material-code-tags: __Code Contributions__
+
+    ---
+
+    - Pick an item from the roadmap
+    - Check our [Contributing Guide](CONTRIBUTING.md)
+    - Follow our coding standards
+    - Submit a pull request
+
+- :material-file-document-edit: __Documentation__
+
+    ---
+
+    - Improve existing docs
+    - Add usage examples
+    - Create tutorials
+    - Fix typos and clarity
+
+- :material-test-tube: __Testing & QA__
+
+    ---
+
+    - Test on different JunOS versions
+    - Report bugs and edge cases
+    - Contribute mock data
+    - Performance testing
+
+- :material-lightbulb: __Ideas & Feedback__
+
+    ---
+
+    - [Open an issue](https://github.com/mitre/train-juniper/issues)
+    - Join discussions
+    - Share use cases
+    - Vote on features
+
+</div>
+
+## :material-email: Contact
+
+<div class="grid cards" markdown>
+
+- :material-github: __GitHub__
+
+    ---
+
+    [github.com/mitre/train-juniper](https://github.com/mitre/train-juniper)
+
+- :material-email-outline: __Email__
+
+    ---
+
+    [saf@mitre.org](mailto:saf@mitre.org)
+
+- :material-slack: __Community__
+
+    ---
+
+    Join our community discussions
+
+</div>
 
 ---
 
-*This roadmap is subject to change based on community feedback, security requirements, and emerging JunOS features.*
+!!! info "Living Document"
+    This roadmap evolves based on community feedback, security requirements, and emerging JunOS features. Last updated: {{ git_revision_date }}
