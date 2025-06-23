@@ -64,11 +64,7 @@ task 'security:secrets' do
   end
 end
 
-desc 'Run Brakeman security vulnerability scan'
-task 'security:brakeman' do
-  puts 'Running Brakeman security scan...'
-  system('bundle exec brakeman --exit-on-warn --quiet --force') or abort('Security vulnerabilities found')
-end
+# Brakeman removed - it's for Rails apps, not Ruby gems
 
 desc 'Run comprehensive security scan'
 task 'security:scan' do
@@ -77,7 +73,7 @@ task 'security:scan' do
 end
 
 desc 'Run all security checks'
-task security: %w[security:dependencies security:brakeman test:security]
+task security: %w[security:dependencies test:security]
 
 desc 'Run all tests including security'
 task 'test:all' => %w[test security]
