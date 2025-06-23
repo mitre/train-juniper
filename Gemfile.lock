@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    train-juniper (0.7.1)
+    train-juniper (0.7.2)
       ffi (>= 1.15.5, < 1.18.0)
       net-ssh (>= 2.9, < 8.0)
       train-core (~> 3.12.13)

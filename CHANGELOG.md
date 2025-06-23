@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2025-06-23
+
+### Documentation
+
+- Improve README structure for better MkDocs rendering
+- Add platform support section to README
+
+### Fixed
+
+- Follow standard RubyGems conventions for gem packaging
+- Remove .md extensions from internal MkDocs links
+- **docs**: Improve Support section formatting with subsections
+- **windows**: Use PowerShell for SSH_ASKPASS on Windows and add cross-platform CI/CD
+- **ci**: Add comprehensive platform support for cross-platform compatibility
+- Update ffi dependency to support Ruby 3.3 on Windows
+- Handle Windows PowerShell script paths in bastion proxy tests
+
+### Miscellaneous Tasks
+
+- Add session.md to .gitignore
+
+### Styling
+
+- Fix trailing whitespace in bastion proxy files
+
+### Testing
+
+- Add nocov markers for Windows-specific PowerShell code
+
 ## [0.7.1] - 2025-06-23
 
 ### Added
@@ -26,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add v0.7.0 to mkdocs and automate nav updates
 - **coverage**: Properly handle SimpleCov :nocov: markers in analysis
 - **docs**: Move Security Policy to About section in navigation
+- Resolve RuboCop violations for CI/CD compliance
+- Update release task to handle GitHub Actions gem publishing
+- Resolve final RuboCop issues in release task
 
 ### Miscellaneous Tasks
 

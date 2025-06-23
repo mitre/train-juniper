@@ -6,7 +6,7 @@ description: Code coverage analysis for train-juniper
 # Coverage Analysis
 
 !!! info "Report Generated"
-    2025-06-23 02:21:42
+    2025-06-23 18:22:23
 
 ## :material-chart-line: Overall Statistics
 
@@ -22,8 +22,8 @@ description: Code coverage analysis for train-juniper
 
     ---
 
-    - Total Lines: **400**
-    - Covered Lines: **400**
+    - Total Lines: **401**
+    - Covered Lines: **401**
     - Files Analyzed: **13**
 
 - :material-check-all: __Coverage Status__
@@ -52,7 +52,7 @@ description: Code coverage analysis for train-juniper
 | `command_executor.rb` | 31 | :material-check-all:{ .mdx-pulse } |
 | `error_handling.rb` | 18 | :material-check-all:{ .mdx-pulse } |
 | `ssh_session.rb` | 29 | :material-check-all:{ .mdx-pulse } |
-| `bastion_proxy.rb` | 42 | :material-check-all:{ .mdx-pulse } |
+| `bastion_proxy.rb` | 43 | :material-check-all:{ .mdx-pulse } |
 | `environment.rb` | 11 | :material-check-all:{ .mdx-pulse } |
 | `logging.rb` | 30 | :material-check-all:{ .mdx-pulse } |
 | `mock_responses.rb` | 14 | :material-check-all:{ .mdx-pulse } |
