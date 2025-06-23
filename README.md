@@ -175,11 +175,11 @@ This allows maximum flexibility while providing sensible defaults for common sce
 | `key_files` | SSH private key files | - | - |
 | `keys_only` | Use only specified keys | false | - |
 
-**Notes**: 
-- Cannot specify both `bastion_host` and `proxy_command` simultaneously
-- If `bastion_user` not provided, falls back to using main `user` for bastion authentication
-- If `bastion_password` not provided, falls back to using main `password` for bastion authentication
-- Supports automated password authentication via SSH_ASKPASS mechanism
+!!! note "Important Configuration Notes"
+    - Cannot specify both `bastion_host` and `proxy_command` simultaneously
+    - If `bastion_user` not provided, falls back to using main `user` for bastion authentication
+    - If `bastion_password` not provided, falls back to using main `password` for bastion authentication
+    - Supports automated password authentication via SSH_ASKPASS mechanism
 
 ### InSpec Configuration File
 
@@ -280,7 +280,8 @@ Train.create('juniper', {
 
 ### Common Authentication Issues
 
-#### ❌ **Error**: "No bastion password specified"
+#### ❌ Error: "No bastion password specified"
+
 **Solution**: Train doesn't have `--bastion-password`. Use one of these patterns:
 ```bash
 # Same password for both (most common)
@@ -293,7 +294,8 @@ inspec detect -t "juniper://user@device?bastion_host=jump" --key-files ~/.ssh/id
 inspec detect -t "juniper://user@device?proxy_command=sshpass%20-p%20jumppass%20ssh%20jumpuser@jump%20-W%20%h:%p" --password "device_pass"
 ```
 
-#### ❌ **Error**: "Authentication failed"
+#### ❌ Error: "Authentication failed"
+
 **Solutions**:
 ```bash
 # Verify bastion connection first
@@ -309,7 +311,8 @@ inspec detect -t "juniper://user@device?bastion_host=jump&proxy_command=ssh%20-v
 inspec detect -t "juniper://user@device?bastion_host=jump" --password "pass" -l debug
 ```
 
-#### ❌ **Error**: "Connection timeout"
+#### ❌ Error: "Connection timeout"
+
 **Solutions**:
 ```bash
 # Increase timeouts
@@ -349,6 +352,7 @@ result = connection.run_command('show version')
 ```
 
 Mock mode provides:
+
 - ✅ Realistic JunOS command outputs
 - ✅ Platform detection (JunOS 12.1X47-D15.4)
 - ✅ Error simulation for negative testing
@@ -407,11 +411,15 @@ This plugin implements the Train Plugin V1 API with:
 
 ## Contributing
 
+We welcome contributions! Here's how to get started:
+
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes with tests
-4. Run `bundle exec rake test` 
+4. Run `bundle exec rake test` to ensure tests pass
 5. Submit a pull request
+
+Please see our [Contributing Guide](CONTRIBUTING) for more details.
 
 ## Support and Contact
 
