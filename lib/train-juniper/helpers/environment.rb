@@ -24,8 +24,6 @@ module TrainPlugins
         return nil unless value
 
         value.to_i
-      rescue ArgumentError
-        nil
       end
     end
   end

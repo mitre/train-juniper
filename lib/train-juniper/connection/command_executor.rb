@@ -26,6 +26,7 @@ module TrainPlugins
         return mock_command_result(safe_cmd) if @options[:mock]
 
         begin
+          # :nocov: Real SSH execution cannot be tested without actual devices
           # Ensure we're connected
           connect unless connected?
 
@@ -42,6 +43,7 @@ module TrainPlugins
           log_error(e, 'Command execution failed')
           # Handle connection errors gracefully
           error_result(e.message)
+          # :nocov:
         end
       end
 

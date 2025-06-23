@@ -25,6 +25,7 @@ module TrainPlugins
       def connect
         return if connected?
 
+        # :nocov: Real SSH connections cannot be tested without actual devices
         begin
           # Use direct SSH connection (network device pattern)
           # Defensive loading - only require if not fully loaded
@@ -52,6 +53,7 @@ module TrainPlugins
         rescue StandardError => e
           handle_connection_error(e)
         end
+        # :nocov:
       end
 
       # Check if SSH connection is active
