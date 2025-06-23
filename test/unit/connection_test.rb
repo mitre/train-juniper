@@ -27,7 +27,7 @@ describe TrainPlugins::Juniper::Connection do
     run_command_via_connection
   ].each do |method_name|
     it "should provide a #{method_name}() method" do
-      _(connection_class.instance_methods(false)).must_include(method_name)
+      _(connection_class.instance_methods).must_include(method_name)
     end
   end
 

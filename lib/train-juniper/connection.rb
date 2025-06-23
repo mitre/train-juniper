@@ -17,6 +17,8 @@ require 'logger'
 # Juniper-specific platform detection
 require 'train-juniper/platform'
 require 'train-juniper/connection/validation'
+require 'train-juniper/connection/command_executor'
+require 'train-juniper/connection/error_handling'
 require 'train-juniper/helpers/environment'
 require 'train-juniper/helpers/mock_responses'
 require 'train-juniper/file_abstraction/juniper_file'
@@ -33,6 +35,13 @@ module TrainPlugins
       include TrainPlugins::Juniper::Environment
       # Include validation methods
       include TrainPlugins::Juniper::Validation
+      # Include command execution methods
+      include TrainPlugins::Juniper::CommandExecutor
+      # Include error handling methods
+      include TrainPlugins::Juniper::ErrorHandling
+
+      # Alias for Train CommandResult for backward compatibility
+      CommandResult = Train::Extras::CommandResult
 
       attr_reader :ssh_session
 
@@ -147,49 +156,7 @@ module TrainPlugins
         raise NotImplementedError, "#{self.class} does not implement #download() - use run_command() to retrieve configuration data"
       end
 
-      # Execute commands on Juniper device via SSH
-      # @param cmd [String] The JunOS command to execute
-      # @return [CommandResult] Result object with stdout, stderr, and exit status
-      # @raise [Train::ClientError] If command contains dangerous characters
-      # @example
-      #   result = connection.run_command('show version')
-      #   puts result.stdout
-      def run_command_via_connection(cmd)
-        # Sanitize command to prevent injection
-        safe_cmd = sanitize_command(cmd)
 
-        return mock_command_result(safe_cmd) if @options[:mock]
-
-        begin
-          # Ensure we're connected
-          connect unless connected?
-
-          @logger.debug("Executing command: #{safe_cmd}")
-
-          # Execute command via SSH session
-          output = @ssh_session.exec!(safe_cmd)
-
-          @logger.debug("Command output: #{output}")
-
-          # Format JunOS result
-          format_junos_result(output, safe_cmd)
-        rescue StandardError => e
-          @logger.error("Command execution failed: #{e.message}")
-          # Handle connection errors gracefully
-          CommandResult.new('', e.message, 1)
-        end
-      end
-
-      # JunOS error patterns organized by type
-      JUNOS_ERRORS = {
-        configuration: [/^error:/i, /configuration database locked/i],
-        syntax: [/syntax error/i],
-        command: [/invalid command/i, /unknown command/i],
-        argument: [/missing argument/i]
-      }.freeze
-
-      # Flattened error patterns for quick matching
-      JUNOS_ERROR_PATTERNS = JUNOS_ERRORS.values.flatten.freeze
 
       # SSH option mapping configuration
       SSH_OPTION_MAPPING = {
@@ -208,13 +175,6 @@ module TrainPlugins
         verify_host_key: :never
       }.freeze
 
-      # Command sanitization patterns
-      # Note: Pipe (|) is allowed as it's commonly used in JunOS commands
-      DANGEROUS_COMMAND_PATTERNS = [
-        /[;&<>$`]/,     # Shell metacharacters (excluding pipe)
-        /\n|\r/,        # Newlines that could inject commands
-        /\\(?![nrt])/   # Escape sequences (except valid ones like \n, \r, \t)
-      ].freeze
 
       # Check connection health
       # @return [Boolean] true if connection is healthy, false otherwise
@@ -244,16 +204,6 @@ module TrainPlugins
         @logger.debug("Environment: JUNIPER_BASTION_USER=#{env_value('JUNIPER_BASTION_USER')} -> bastion_user=#{@options[:bastion_user]}")
       end
 
-      # Sanitize command to prevent injection attacks
-      def sanitize_command(cmd)
-        cmd_str = cmd.to_s.strip
-
-        if DANGEROUS_COMMAND_PATTERNS.any? { |pattern| cmd_str.match?(pattern) }
-          raise Train::ClientError, "Invalid characters in command: #{cmd_str.inspect}"
-        end
-
-        cmd_str
-      end
 
       # Establish SSH connection to Juniper device
       def connect
@@ -331,42 +281,8 @@ module TrainPlugins
         @logger.debug('Configured SSH_ASKPASS for automated bastion authentication')
       end
 
-      # Handle connection errors with helpful messages
-      def handle_connection_error(error)
-        @logger.error("SSH connection failed: #{error.message}")
 
-        if bastion_auth_error?(error)
-          raise Train::TransportError, bastion_error_message(error)
-        else
-          raise Train::TransportError, "Failed to connect to Juniper device #{@options[:host]}: #{error.message}"
-        end
-      end
 
-      # Check if error is bastion authentication related
-      def bastion_auth_error?(error)
-        @options[:bastion_host] &&
-          (error.message.include?('Permission denied') || error.message.include?('command failed'))
-      end
-
-      # Build helpful bastion error message
-      def bastion_error_message(error)
-        <<~ERROR
-          Failed to connect to Juniper device #{@options[:host]} via bastion #{@options[:bastion_host]}: #{error.message}
-
-          Possible causes:
-          1. Incorrect bastion credentials (user: #{@options[:bastion_user] || @options[:user]})
-          2. Network connectivity issues to bastion host
-          3. Bastion host SSH service not available on port #{@options[:bastion_port]}
-          4. Target device not reachable from bastion
-
-          Authentication options:
-          - Password: Use --bastion-password (or JUNIPER_BASTION_PASSWORD env var)
-          - SSH Key: Use --key-files option to specify SSH private key files
-          - SSH Agent: Ensure your SSH agent has the required keys loaded
-
-          For more details, see: https://mitre.github.io/train-juniper/troubleshooting/#bastion-authentication
-        ERROR
-      end
 
       # Test connection and configure JunOS session
       def test_and_configure_session
@@ -386,35 +302,8 @@ module TrainPlugins
         @logger.warn("Failed to configure JunOS session: #{e.message}")
       end
 
-      # Format JunOS command results (from implementation plan)
-      def format_junos_result(output, cmd)
-        # Parse JunOS-specific error patterns
-        if junos_error?(output)
-          CommandResult.new('', output, 1)
-        else
-          CommandResult.new(clean_output(output, cmd), '', 0)
-        end
-      end
 
-      # Check for JunOS error patterns (from implementation plan)
-      def junos_error?(output)
-        JUNOS_ERROR_PATTERNS.any? { |pattern| output.match?(pattern) }
-      end
 
-      # Clean command output
-      def clean_output(output, cmd)
-        # Handle nil output gracefully
-        return '' if output.nil?
-
-        # Remove command echo and prompts
-        lines = output.to_s.split("\n")
-        lines.reject! { |line| line.strip == cmd.strip }
-
-        # Remove JunOS prompt patterns from the end
-        lines.pop while lines.last && lines.last.strip.match?(/^[%>$#]+\s*$/)
-
-        lines.join("\n")
-      end
 
       # Build SSH connection options from @options
       def build_ssh_options
@@ -470,11 +359,6 @@ module TrainPlugins
         args.join(' ')
       end
 
-      # Mock command execution for testing
-      def mock_command_result(cmd)
-        output, exit_status = MockResponses.response_for(cmd)
-        CommandResult.new(output, '', exit_status)
-      end
     end
   end
 end
