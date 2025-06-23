@@ -103,5 +103,5 @@ end
 #------------------------------------------------------------------#
 #                    Bundler Gem Tasks
 #------------------------------------------------------------------#
-# This provides the standard 'rake release' task that rubygems/release-gem expects
-require 'bundler/gem_tasks'
+# Bundler gem tasks disabled - we use GitHub Actions for gem publication
+# require 'bundler/gem_tasks'
