@@ -95,3 +95,6 @@ recovery-prompt-resource-pack-scope.md
 
 # Large test images (should not be committed)
 test/images/**/*.tgz
+
+# Built gem packages (standard RubyGems convention)
+pkg/

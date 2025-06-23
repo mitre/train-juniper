@@ -240,12 +240,13 @@ task :release do
     # Tag exists, assume we're in GitHub Actions and need to build/push gem
     puts "Tag #{tag} already exists - proceeding with gem build and push"
 
-    # Build the gem
+    # Build the gem in pkg/ directory (standard convention)
+    FileUtils.mkdir_p('pkg')
     gem_file = "train-juniper-#{version}.gem"
-    system('gem build train-juniper.gemspec') or abort('Failed to build gem')
+    system('gem build train-juniper.gemspec -o pkg/') or abort('Failed to build gem')
 
-    # Push to RubyGems
-    system("gem push #{gem_file}") or abort('Failed to push gem to RubyGems')
+    # Push to RubyGems from pkg/ directory
+    system("gem push pkg/#{gem_file}") or abort('Failed to push gem to RubyGems')
 
     puts "✅ Published #{gem_file} to RubyGems.org"
   end
