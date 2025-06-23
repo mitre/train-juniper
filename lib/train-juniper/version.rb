@@ -8,6 +8,6 @@
 module TrainPlugins
   module Juniper
     # Version number of the train-juniper plugin
-    VERSION = '0.6.2'
+    VERSION = '0.7.0'
   end
 end
