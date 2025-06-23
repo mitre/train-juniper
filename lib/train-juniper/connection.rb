@@ -16,10 +16,10 @@ require 'logger'
 
 # Juniper-specific platform detection
 require 'train-juniper/platform'
-require 'train-juniper/mock_responses'
-require 'train-juniper/juniper_file'
-require 'train-juniper/environment_helpers'
-require 'train-juniper/validation'
+require 'train-juniper/connection/validation'
+require 'train-juniper/helpers/environment'
+require 'train-juniper/helpers/mock_responses'
+require 'train-juniper/file_abstraction/juniper_file'
 
 # Using Train's SSH transport for connectivity
 
@@ -30,7 +30,7 @@ module TrainPlugins
       # Include Juniper-specific platform detection
       include TrainPlugins::Juniper::Platform
       # Include environment variable helpers
-      include TrainPlugins::Juniper::EnvironmentHelpers
+      include TrainPlugins::Juniper::Environment
       # Include validation methods
       include TrainPlugins::Juniper::Validation
 

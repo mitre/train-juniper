@@ -3,7 +3,7 @@
 module TrainPlugins
   module Juniper
     # Helper methods for safely handling environment variables
-    module EnvironmentHelpers
+    module Environment
       # Helper method to safely get environment variable value
       # Returns nil if env var is not set or is empty string
       # @param key [String] The environment variable name
