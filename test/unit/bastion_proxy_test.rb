@@ -101,8 +101,17 @@ describe 'BastionProxy module' do
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
 
       # Verify script contains device password
-      script_content = File.read(ENV.fetch('SSH_ASKPASS', nil))
-      _(script_content).must_include('secret') # device password
+      if Gem.win_platform?
+        # On Windows, SSH_ASKPASS points to wrapper batch file
+        # Need to extract PowerShell script path from wrapper
+        wrapper_content = File.read(ENV.fetch('SSH_ASKPASS', nil))
+        ps1_path = wrapper_content.match(/-File "([^"]+)"/)[1]
+        ps_content = File.read(ps1_path)
+        _(ps_content).must_include('secret') # device password
+      else
+        script_content = File.read(ENV.fetch('SSH_ASKPASS', nil))
+        _(script_content).must_include('secret') # device password
+      end
 
       # Clean up
       ENV['SSH_ASKPASS'] = original_askpass
@@ -142,19 +151,28 @@ describe 'BastionProxy module' do
 
       _(File.exist?(script_path)).must_equal(true)
 
-      content = File.read(script_path)
       if Gem.win_platform?
         _(script_path).must_match(/\.bat$/)
+        content = File.read(script_path)
         _(content).must_include('@echo off')
         _(content).must_include('powershell.exe -ExecutionPolicy Bypass')
         _(content).must_match(/\.ps1/)
+
+        # Also verify the PowerShell script contains the password
+        ps1_path = content.match(/-File "([^"]+)"/)[1]
+        ps_content = File.read(ps1_path)
+        _(ps_content).must_include("Write-Output 'test_pass'")
       else
         _(File.executable?(script_path)).must_equal(true)
+        content = File.read(script_path)
         _(content).must_include('#!/bin/bash')
         _(content).must_include("echo 'test_pass'")
       end
 
       # Clean up
+      if Gem.win_platform? && defined?(ps1_path)
+        FileUtils.rm_f(ps1_path)
+      end
       FileUtils.rm_f(script_path)
     end
 
