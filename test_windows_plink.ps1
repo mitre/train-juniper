@@ -1,6 +1,20 @@
 # PowerShell test script for train-juniper Windows support
 # Run this as: .\test_windows_plink.ps1
 
+# Load .env file if it exists
+if (Test-Path ".env") {
+    Write-Host "Loading .env file..." -ForegroundColor Yellow
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match '^\s*([^#][^=]+)=(.*)$') {
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            # Remove quotes if present
+            $value = $value -replace '^["'']|["'']$', ''
+            [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+        }
+    }
+}
+
 Write-Host "=== Train-Juniper Windows Plink Test (PowerShell) ===" -ForegroundColor Cyan
 Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
 Write-Host "Ruby Version: $(ruby -v)"
@@ -74,6 +88,15 @@ Write-Host '    --bastion-user jumpuser `' -ForegroundColor Gray
 Write-Host '    --bastion-password "jump_pass" `' -ForegroundColor Gray
 Write-Host '    --password "device_pass"' -ForegroundColor Gray
 Write-Host ""
+
+# Check if environment variables are set for real testing
+if ($env:JUNIPER_HOST -and $env:BASTION_HOST) {
+    Write-Host ""
+    Write-Host "Environment variables detected:" -ForegroundColor Cyan
+    Write-Host "  JUNIPER_HOST: $env:JUNIPER_HOST" -ForegroundColor Gray
+    Write-Host "  BASTION_HOST: $env:BASTION_HOST" -ForegroundColor Gray
+    Write-Host "  Ready for real device testing!" -ForegroundColor Green
+}
 
 # Summary
 Write-Host "=== Summary ===" -ForegroundColor Cyan
