@@ -49,7 +49,7 @@ describe 'BastionProxy module' do
 
       # Save and clear SSH_ASKPASS to ensure clean test
       original_ssh_askpass = ENV.delete('SSH_ASKPASS')
-      
+
       begin
         # Mock plink availability
         connection.stub :plink_available?, true do
