@@ -17,6 +17,9 @@ module TrainPlugins
 
       # Default SSH options for Juniper connections
       # @note verify_host_key is set to :never for network device compatibility
+      # Rationale: Network devices often regenerate SSH keys after firmware updates
+      # and operate in controlled environments where MITM attacks are mitigated by
+      # network segmentation. This matches standard network automation practices.
       SSH_DEFAULTS = {
         verify_host_key: :never
       }.freeze

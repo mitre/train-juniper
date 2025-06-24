@@ -73,8 +73,8 @@ describe TrainPlugins::Juniper::WindowsProxy do
 
     it 'handles special characters in password' do
       cmd = instance.build_plink_proxy_command('bastion.example.com', 'user', 22, 'pass word!')
-      _(cmd).must_include '"pass word!"'
-      # Password with space should be quoted
+      _(cmd).must_include 'pass\\ word\\!'
+      # Password should be properly escaped using Shellwords
     end
   end
 end

@@ -40,9 +40,9 @@ module TrainPlugins
           # Format JunOS result
           format_junos_result(output, safe_cmd)
         rescue StandardError => e
-          log_error(e, 'Command execution failed')
+          log_error(e, "Command execution failed for: #{safe_cmd}")
           # Handle connection errors gracefully
-          error_result(e.message)
+          error_result("#{e.message} (command: #{safe_cmd})")
           # :nocov:
         end
       end

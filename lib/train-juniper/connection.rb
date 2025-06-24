@@ -102,10 +102,10 @@ module TrainPlugins
         end
 
         @options[:keepalive] = true
-        @options[:keepalive_interval] = 60
+        @options[:keepalive_interval] = Constants::SSH_KEEPALIVE_INTERVAL
 
         # Setup logger
-        @logger = @options[:logger] || Logger.new(STDOUT, level: Logger::WARN)
+        @logger = @options[:logger] || Logger.new(STDOUT, level: Constants::DEFAULT_LOG_LEVEL)
 
         # JunOS CLI prompt patterns
         @cli_prompt = /[%>$#]\s*$/

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'logger'
+
 module TrainPlugins
   module Juniper
     # Common constants used across the plugin
@@ -9,6 +11,14 @@ module TrainPlugins
       DEFAULT_SSH_PORT = 22
       # @return [Range] Valid port range for SSH connections
       PORT_RANGE = (1..65_535)
+      # @return [Integer] SSH keepalive interval in seconds
+      SSH_KEEPALIVE_INTERVAL = 60
+      # @return [Integer] Maximum keepalive count before disconnect
+      SSH_KEEPALIVE_MAX_COUNT = 3
+
+      # Logging Configuration
+      # @return [Integer] Default log level
+      DEFAULT_LOG_LEVEL = Logger::WARN
 
       # Standard SSH Options for network devices
       STANDARD_SSH_OPTIONS = {

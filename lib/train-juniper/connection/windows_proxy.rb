@@ -30,7 +30,7 @@ module TrainPlugins
         parts << '-batch' # Non-interactive mode
         parts << '-ssh'   # Force SSH protocol (not telnet)
         parts << '-pw'
-        parts << (password.include?(' ') ? "\"#{password}\"" : password)
+        parts << Shellwords.escape(password)
 
         if port && port != 22
           parts << '-P'
