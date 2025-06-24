@@ -6,7 +6,7 @@ description: Code coverage analysis for train-juniper
 # Coverage Analysis
 
 !!! info "Report Generated"
-    2025-06-23 19:06:22
+    2025-06-24 17:38:58
 
 ## :material-chart-line: Overall Statistics
 
@@ -16,24 +16,34 @@ description: Code coverage analysis for train-juniper
 
     ---
 
-    ### **100.0%**
+    ### **98.88%**
 
 - :material-file-document-multiple: __Code Metrics__
 
     ---
 
-    - Total Lines: **401**
-    - Covered Lines: **401**
-    - Files Analyzed: **13**
+    - Total Lines: **446**
+    - Covered Lines: **441**
+    - Files Analyzed: **15**
 
 - :material-check-all: __Coverage Status__
 
     ---
 
-    - Files with 100%: **13**
-    - Files Needing Work: **0**
+    - Files with 100%: **14**
+    - Files Needing Work: **1**
 
 </div>
+
+## :material-alert-circle: Files Needing Coverage Improvements
+
+!!! warning "Coverage Gaps"
+    The following files have uncovered lines:
+
+| File | Coverage | Lines | Uncovered Lines |
+|------|----------|-------|-----------------|
+| `bastion_proxy.rb` | **88.1%** | 37/42 | `23, 53, 55, 62, 63` |
+
 
 ## :material-check-circle: Files with Complete Coverage
 
@@ -44,7 +54,6 @@ description: Code coverage analysis for train-juniper
 
 | File | Lines Covered | Status |
 |------|---------------|--------|
-| `juniper_file.rb` | 26 | :material-check-all:{ .mdx-pulse } |
 | `connection.rb` | 71 | :material-check-all:{ .mdx-pulse } |
 | `constants.rb` | 12 | :material-check-all:{ .mdx-pulse } |
 | `platform.rb` | 59 | :material-check-all:{ .mdx-pulse } |
@@ -52,16 +61,26 @@ description: Code coverage analysis for train-juniper
 | `command_executor.rb` | 31 | :material-check-all:{ .mdx-pulse } |
 | `error_handling.rb` | 18 | :material-check-all:{ .mdx-pulse } |
 | `ssh_session.rb` | 29 | :material-check-all:{ .mdx-pulse } |
-| `bastion_proxy.rb` | 43 | :material-check-all:{ .mdx-pulse } |
+| `windows_proxy.rb` | 22 | :material-check-all:{ .mdx-pulse } |
+| `ssh_askpass.rb` | 24 | :material-check-all:{ .mdx-pulse } |
 | `environment.rb` | 11 | :material-check-all:{ .mdx-pulse } |
 | `logging.rb` | 30 | :material-check-all:{ .mdx-pulse } |
 | `mock_responses.rb` | 14 | :material-check-all:{ .mdx-pulse } |
 | `transport.rb` | 28 | :material-check-all:{ .mdx-pulse } |
+| `juniper_file.rb` | 26 | :material-check-all:{ .mdx-pulse } |
 
 </div>
 
 
+## :material-target: Recommendations
+
+!!! tip "Focus Areas"
+    Focus on these files for maximum coverage improvement:
+
+    1. **`bastion_proxy.rb`** - 5 uncovered lines (currently 88.1%)
+        - Lines to cover: `23, 53, 55, 62, 63`
+
 ## :material-shield-check: Coverage Assessment
 
-!!! success "Perfect Coverage!"
-    **100% code coverage achieved!** All code paths are tested.
+!!! success "Excellent Coverage"
+    **Coverage exceeds 90% threshold** - Well-tested codebase!
