@@ -47,15 +47,23 @@ describe 'BastionProxy module' do
       # :nocov:
       skip 'Non-Windows test environment' unless Gem.win_platform?
 
-      # Mock plink availability
-      connection.stub :plink_available?, true do
-        ssh_options = {}
+      # Save and clear SSH_ASKPASS to ensure clean test
+      original_ssh_askpass = ENV.delete('SSH_ASKPASS')
+      
+      begin
+        # Mock plink availability
+        connection.stub :plink_available?, true do
+          ssh_options = {}
 
-        connection.send(:configure_bastion_proxy, ssh_options)
+          connection.send(:configure_bastion_proxy, ssh_options)
 
-        _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Command)
-        # SSH_ASKPASS should not be set when using plink
-        _(ENV.fetch('SSH_ASKPASS', nil)).must_be_nil
+          _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Command)
+          # SSH_ASKPASS should not be set when using plink
+          _(ENV.fetch('SSH_ASKPASS', nil)).must_be_nil
+        end
+      ensure
+        # Restore original value if it existed
+        ENV['SSH_ASKPASS'] = original_ssh_askpass if original_ssh_askpass
       end
       # :nocov:
     end
