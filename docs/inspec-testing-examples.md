@@ -20,12 +20,19 @@ This guide provides examples for testing Juniper devices using InSpec with the t
 ### Test Direct Connection
 ```powershell
 # Basic connection test
-inspec detect -t juniper://admin@device.example.com --password 'your-password'
+inspec shell -t juniper://admin@device.example.com --password 'your-password'
 
-# With bastion host
-inspec detect -t juniper://admin@device.example.com --password 'device-pass' `
+# With bastion host using SSH keys
+inspec shell -t juniper://admin@device.example.com --password 'device-pass' `
   --bastion-host bastion.example.com `
-  --bastion-user jumpuser
+  --bastion-user jumpuser `
+  --key-files ~/.ssh/id_rsa
+
+# With bastion host using password (requires plink.exe on Windows)
+inspec shell -t juniper://admin@device.example.com --password 'device-pass' `
+  --bastion-host bastion.example.com `
+  --bastion-user jumpuser `
+  --bastion-password 'bastion-pass'
 ```
 
 ### Enable Debug Logging
@@ -34,7 +41,7 @@ inspec detect -t juniper://admin@device.example.com --password 'device-pass' `
 $env:TRAIN_JUNIPER_LOG_LEVEL = "debug"
 
 # Run with debug output
-inspec detect -t juniper://admin@device.example.com --password 'your-password' -l debug
+inspec shell -t juniper://admin@device.example.com --password 'your-password' -l debug
 ```
 
 ## Using Structured Output (XML/JSON)

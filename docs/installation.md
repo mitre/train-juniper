@@ -88,7 +88,7 @@ cd train-juniper
 bundle install
 
 # Use with bundle exec
-bundle exec inspec detect -t juniper://device.example.com
+bundle exec inspec shell -t juniper://device.example.com
 ```
 
 ## Verification
@@ -101,7 +101,7 @@ inspec plugin list
 # Should show: train-juniper
 
 # Test URI scheme recognition
-inspec detect -t juniper://
+inspec shell -t juniper://
 # Should show usage help, not "unsupported scheme"
 ```
 
@@ -109,7 +109,7 @@ inspec detect -t juniper://
 
 ```bash
 # Test with mock mode
-inspec detect -t juniper://mock --reporter json
+inspec shell -t juniper://mock --reporter json
 ```
 
 Expected output:
@@ -127,7 +127,7 @@ Expected output:
 
 ```bash
 # Test with real device (replace with your device)
-inspec detect -t juniper://admin@device.example.com
+inspec shell -t juniper://admin@device.example.com
 ```
 
 Expected output:
@@ -211,7 +211,7 @@ export JUNIPER_PORT=22
     gem install train-juniper
     
     # Then verify it works:
-    inspec detect -t juniper://mock
+    inspec shell -t juniper://mock
     ```
 
 === "Check Gem Environment"
@@ -247,7 +247,7 @@ inspec plugin install train-juniper
 git clone https://github.com/mitre/train-juniper.git
 cd train-juniper
 bundle install
-bundle exec inspec detect -t juniper://device.example.com
+bundle exec inspec shell -t juniper://device.example.com
 ```
 
 ### SSH Connection Issues
@@ -260,7 +260,7 @@ bundle exec inspec detect -t juniper://device.example.com
 ssh admin@device.example.com
 
 # Enable SSH debug in plugin
-TRAIN_DEBUG=true inspec detect -t juniper://admin@device.example.com
+TRAIN_DEBUG=true inspec shell -t juniper://admin@device.example.com
 
 # Check SSH agent
 ssh-add -l
@@ -310,7 +310,7 @@ gem build train-juniper.gemspec
 inspec plugin install train-juniper-0.4.0.gem
 
 # Test with real device
-inspec detect -t juniper://admin@your-device.com
+inspec shell -t juniper://admin@your-device.com
 ```
 
 ## Next Steps

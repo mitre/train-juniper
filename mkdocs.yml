@@ -84,6 +84,9 @@ nav:
     - Contributing: CONTRIBUTING.md
     - Documentation Guide: DOCUMENTATION_GUIDE.md
     - Release Process: RELEASE_PROCESS.md
+    - Technical Research:
+      - Windows SSH Research: development/windows-ssh-research.md
+      - Windows Development Guide: development/windows-development-guide.md
   - Project:
     - About: 
       - Roadmap: ROADMAP.md

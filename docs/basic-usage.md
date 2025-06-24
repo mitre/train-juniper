@@ -17,7 +17,10 @@ inspec plugin install train-juniper
 
 ```bash
 # Test connection to your device
-inspec detect -t juniper://admin@your-juniper-device.com
+inspec shell -t juniper://admin@your-juniper-device.com
+
+# For detailed connection debugging, add -l debug:
+inspec shell -t juniper://admin@your-juniper-device.com -l debug
 ```
 
 !!! success "Expected Output"
@@ -57,7 +60,7 @@ export JUNIPER_USER=admin
 export JUNIPER_PASSWORD=your_password
 
 # Connect using environment variables
-inspec detect -t juniper://
+inspec shell -t juniper://
 ```
 
 !!! warning "Security Note"
@@ -67,28 +70,28 @@ inspec detect -t juniper://
 
 ```bash
 # Username and password in URL
-inspec detect -t juniper://admin:password@device.example.com
+inspec shell -t juniper://admin:password@device.example.com
 ```
 
 ### SSH Key Authentication
 
 ```bash
 # Using SSH private key
-inspec detect -t juniper://admin@device.example.com --key-files ~/.ssh/id_rsa
+inspec shell -t juniper://admin@device.example.com --key-files ~/.ssh/id_rsa
 ```
 
 ### Custom SSH Port
 
 ```bash
 # Non-standard SSH port
-inspec detect -t juniper://admin@device.example.com:2222
+inspec shell -t juniper://admin@device.example.com:2222
 ```
 
 ### Through Bastion Host
 
 ```bash
 # Connect through jump host
-inspec detect -t juniper://admin@device.example.com \
+inspec shell -t juniper://admin@device.example.com \
   --bastion-host jump.example.com \
   --bastion-user bastion_user
 ```
@@ -187,7 +190,7 @@ When you don't have access to a real Juniper device, you can test using mock mod
 === "Quick Test"
     ```bash
     # Test with mock mode (no real device needed)  
-    inspec detect -t juniper://mock
+    inspec shell -t juniper://mock
     ```
 
 === "Profile Testing"
@@ -266,7 +269,7 @@ Configure connection settings using environment variables:
 ssh admin@your-device.example.com "show version"
 
 # Enable debug logging for train-juniper
-TRAIN_DEBUG=true inspec detect -t juniper://admin@your-device.example.com
+TRAIN_DEBUG=true inspec shell -t juniper://admin@your-device.example.com
 ```
 
 ### Common Issues

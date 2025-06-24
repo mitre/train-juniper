@@ -87,19 +87,47 @@ conn = Train.create('juniper', {
 #### Password Prompt Still Appears
 If you're still prompted for passwords:
 1. Verify plink.exe is in your PATH: `where plink.exe`
-2. Consider using SSH keys instead
-3. Check Windows Event Viewer for SSH-related errors
+2. Ensure you've accepted the bastion host key (see setup steps above)
+3. Check if plink is being detected by enabling debug logging
+4. Consider using SSH keys instead
 
 #### Connection Failures
 1. Test direct SSH connection first: `ssh user@host`
-2. Test bastion connection: `ssh -J jumpuser@bastion user@device`
-3. Enable debug logging:
-   ```ruby
-   conn = Train.create('juniper', {
-     host: 'device.example.com',
-     logger: Logger.new(STDOUT, level: :debug)
-   })
+2. Test plink connection to bastion:
+   ```powershell
+   plink.exe -ssh jumpuser@bastion.example.com
    ```
+3. Test plink proxy connection:
+   ```powershell
+   plink.exe -batch -ssh -pw "password" jumpuser@bastion -nc device.internal:22
+   ```
+4. Enable debug logging to see which proxy method is being used:
+   ```powershell
+   $env:TRAIN_JUNIPER_LOG_LEVEL = "debug"
+   inspec shell -t juniper://admin@device --password 'pass' `
+     --bastion-host jump --bastion-user user `
+     --bastion-password 'bastion-pass' -l debug
+   ```
+   Look for: "Using plink.exe for bastion proxy"
+
+#### Password with Special Characters
+- Use double quotes in PowerShell
+- Escape with backtick: `` ` ``
+- Example: ``--password "pass`$word"``
+
+#### Debugging plink.exe Detection
+Enable debug logging to verify plink.exe is being used:
+```ruby
+conn = Train.create('juniper', {
+  host: 'device.example.com',
+  bastion_host: 'jump.example.com',
+  logger: Logger.new(STDOUT, level: :debug)
+})
+```
+
+Debug messages to look for:
+- "Using plink.exe for bastion proxy" - plink is being used
+- "Using bastion host: ..." - standard SSH proxy (plink not detected)
 
 ## InSpec Usage on Windows
 
@@ -107,15 +135,16 @@ If you're still prompted for passwords:
 After accepting the bastion host key, test your connection:
 
 ```powershell
-# Test connection with InSpec detect
-inspec detect -t juniper://admin@device.example.com --password 'device-password' `
-  --bastion-host bastion.example.com `
-  --bastion-user jumpuser
-
-# Interactive shell session
+# Test connection with InSpec shell
 inspec shell -t juniper://admin@device.example.com --password 'device-password' `
   --bastion-host bastion.example.com `
-  --bastion-user jumpuser
+  --bastion-user jumpuser `
+  --bastion-password 'bastion-password'
+
+# Once connected, you can run commands:
+# juniper.version
+# juniper.model
+# command('show version').stdout
 ```
 
 ### Running InSpec Profiles
