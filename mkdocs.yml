@@ -69,10 +69,13 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started:
-    - Installation: installation.md
+  - Setup & Installation:
+    - Quick Start: installation.md
+    - Platform Guides:
+      - Windows Ruby Setup: windows-setup.md
+      - Windows Bastion Setup: windows-bastion-setup.md
+  - Usage:
     - Basic Usage: basic-usage.md
-    - Windows Setup: windows-setup.md
   - Documentation:
     - API Reference: api-documentation.md
     - Coverage Report: coverage-report.md

@@ -1,0 +1,109 @@
+# Windows Bastion Authentication Setup
+
+This guide helps Windows users configure bastion/jump host authentication with the train-juniper plugin.
+
+!!! tip "Prerequisites"
+    Make sure you have Ruby properly installed on Windows. See the [Windows Ruby Setup Guide](windows-setup.md) for detailed instructions on setting up Ruby, InSpec, and development tools.
+
+## Installation
+
+### Via RubyGems (Recommended)
+```powershell
+gem install train-juniper
+```
+
+### Via InSpec Plugin (Alternative)
+If `inspec plugin install train-juniper` fails with "Unknown error occurred", use the direct gem install method above. This is a known InSpec issue on some Windows installations.
+
+## Bastion/Jump Host Authentication
+
+### SSH Key Authentication (Recommended)
+For best results on Windows, use SSH key authentication for bastion hosts:
+
+```ruby
+# Example with SSH key
+conn = Train.create('juniper', {
+  host: 'device.example.com',
+  user: 'admin',
+  bastion_host: 'bastion.example.com',
+  bastion_user: 'jumpuser',
+  key_files: ['~/.ssh/id_rsa']  # Works for both device and bastion
+})
+```
+
+### Password Authentication with PuTTY's plink.exe
+
+Windows OpenSSH doesn't support the SSH_ASKPASS environment variable, which prevents automated password authentication through bastion hosts. The train-juniper plugin automatically uses PuTTY's `plink.exe` when available to work around this limitation.
+
+!!! info "Community Pattern"
+    This approach follows established patterns used by Ruby projects like hglib (Mercurial) and others that need Windows SSH proxy support. The implementation uses `Net::SSH::Proxy::Command` with plink.exe.
+
+#### Installing PuTTY
+1. Download PuTTY from: https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html
+2. Install PuTTY or extract the standalone executables
+3. Add PuTTY's directory to your system PATH:
+   - Open System Properties → Advanced → Environment Variables
+   - Add PuTTY's directory (e.g., `C:\Program Files\PuTTY`) to PATH
+
+#### Verify plink.exe is Available
+```powershell
+where plink.exe
+```
+
+#### Using Password Authentication
+When plink.exe is available, password authentication works automatically:
+
+```ruby
+conn = Train.create('juniper', {
+  host: 'device.example.com',
+  user: 'admin',
+  password: 'device_password',
+  bastion_host: 'bastion.example.com',
+  bastion_user: 'jumpuser',
+  bastion_password: 'bastion_password'  # Works with plink.exe
+})
+```
+
+### Troubleshooting
+
+#### Password Prompt Still Appears
+If you're still prompted for passwords:
+1. Verify plink.exe is in your PATH: `where plink.exe`
+2. Consider using SSH keys instead
+3. Check Windows Event Viewer for SSH-related errors
+
+#### Connection Failures
+1. Test direct SSH connection first: `ssh user@host`
+2. Test bastion connection: `ssh -J jumpuser@bastion user@device`
+3. Enable debug logging:
+   ```ruby
+   conn = Train.create('juniper', {
+     host: 'device.example.com',
+     logger: Logger.new(STDOUT, level: :debug)
+   })
+   ```
+
+## InSpec Usage on Windows
+
+```powershell
+# Using train-juniper with InSpec
+inspec exec profile --target juniper://admin@device.example.com --password 'secret'
+
+# With bastion host (SSH keys recommended)
+inspec exec profile --target juniper://admin@device.example.com \
+  --bastion-host bastion.example.com \
+  --bastion-user jumpuser
+```
+
+## Known Limitations
+
+1. **SSH_ASKPASS**: Not supported by Windows OpenSSH
+2. **InSpec Plugin Installer**: May fail on some Windows installations - use `gem install` instead
+3. **Password with Special Characters**: May need escaping in PowerShell
+
+## Security Recommendations
+
+1. Use SSH keys whenever possible
+2. Store credentials in environment variables or credential managers
+3. Avoid hardcoding passwords in scripts
+4. Use Windows Credential Manager for secure storage

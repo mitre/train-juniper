@@ -1,9 +1,14 @@
-# Installation Guide
+# Quick Start Installation
 
-Complete installation instructions for the Train-Juniper plugin.
+Get up and running with Train-Juniper in minutes!
 
-!!! info "Quick Start"
-    New to Train-Juniper? Follow **Method 1** for the fastest installation experience.
+!!! tip "Platform-Specific Setup"
+    === "macOS/Linux"
+        You're ready to go! Just ensure Ruby 3.0+ is installed.
+        
+    === "Windows"
+        - **Ruby Setup**: See [Windows Ruby Setup](windows-setup.md) for development environment
+        - **Bastion/Jump Hosts**: See [Windows Bastion Setup](windows-bastion-setup.md) for authentication options
 
 ## Prerequisites
 
@@ -15,7 +20,7 @@ Complete installation instructions for the Train-Juniper plugin.
 ### System Requirements
 - **SSH Client**: OpenSSH or compatible
 - **Network Access**: Connectivity to target Juniper devices
-- **Platform**: Linux, macOS, or Windows with WSL
+- **Platform**: Linux, macOS, or Windows
 
 ## Installation Methods
 
@@ -34,7 +39,7 @@ inspec plugin list
 !!! success "Installation Complete"
     If you see `train-juniper` in the plugin list, you're ready to go!
 
-[Get Started with Basic Usage](basic-usage){ .md-button .md-button--primary }
+[Get Started with Basic Usage](basic-usage.md){ .md-button .md-button--primary }
 
 ### Method 2: Local Gem Installation :material-developer-board:
 
@@ -199,6 +204,16 @@ export JUNIPER_PORT=22
     inspec plugin install train-juniper
     ```
 
+=== "Windows Alternative"
+    ```powershell
+    # If InSpec plugin install fails on Windows
+    # Use direct gem installation instead:
+    gem install train-juniper
+    
+    # Then verify it works:
+    inspec detect -t juniper://mock
+    ```
+
 === "Check Gem Environment"
     ```bash
     # Verify gem is available
@@ -300,12 +315,12 @@ inspec detect -t juniper://admin@your-device.com
 
 ## Next Steps
 
-- **[Basic Usage](basic-usage)** - Learn to use the plugin
+- **[Basic Usage](basic-usage.md)** - Learn to use the plugin
 - **[Train Plugin Development Guide](https://github.com/mitre/train-plugin-development-guide)** - Comprehensive development documentation
-- **[Contributing Guide](CONTRIBUTING)** - How to contribute to the project
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/mitre/train-juniper/issues)
-- **Development**: [Contributing Guide](CONTRIBUTING)
-- **Security**: [Security Policy](SECURITY)
+- **Development**: [Contributing Guide](CONTRIBUTING.md)
+- **Security**: [Security Policy](SECURITY.md)

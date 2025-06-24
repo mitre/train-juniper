@@ -409,7 +409,7 @@ This gem supports a wide range of platforms to ensure maximum compatibility:
 | `x86_64-linux-musl` | Alpine Linux | Docker containers |
 | `x86_64-darwin` | Intel macOS | Older Mac workstations |
 | `arm64-darwin-*` | Apple Silicon macOS | Modern Mac workstations |
-| `x64-mingw-ucrt` | Windows (UCRT) | Windows 10/11 with modern Ruby |
+| `x64-mingw-ucrt` | Windows (UCRT) | Windows 10/11 with modern Ruby ([bastion setup](windows-bastion-setup.md)) |
 | `x86_64-freebsd` | FreeBSD | Network appliances (JunOS heritage) |
 | `x86_64-solaris` | Solaris/illumos | Enterprise environments |
 
@@ -418,10 +418,11 @@ This gem supports a wide range of platforms to ensure maximum compatibility:
 
 ### Documentation
 
-- **[Installation Guide](installation)** - Complete installation instructions
-- **[Basic Usage](basic-usage)** - Getting started with the plugin
-- **[Release Process](RELEASE_PROCESS)** - How to cut releases and publish gems
-- **[Project Roadmap](ROADMAP)** - Future development plans and contribution opportunities
+- **[Installation Guide](installation.md)** - Complete installation instructions
+- **[Basic Usage](basic-usage.md)** - Getting started with the plugin
+- **[Windows Bastion Setup](windows-bastion-setup.md)** - Windows bastion/jump host authentication guide
+- **[Release Process](RELEASE_PROCESS.md)** - How to cut releases and publish gems
+- **[Project Roadmap](ROADMAP.md)** - Future development plans and contribution opportunities
 
 ### Plugin Development Resources
 
@@ -438,7 +439,7 @@ We welcome contributions! Here's how to get started:
 4. Run `bundle exec rake test` to ensure tests pass
 5. Submit a pull request
 
-Please see our [Contributing Guide](CONTRIBUTING) for more details.
+Please see our [Contributing Guide](CONTRIBUTING.md) for more details.
 
 ## Support and Contact
 
@@ -472,12 +473,12 @@ Special thanks to the Train and InSpec communities for their excellent documenta
 
 Licensed under the Apache-2.0 license, except as noted below.
 
-See [LICENSE](LICENSE) for full details.
+See [LICENSE](LICENSE.md) for full details.
 
 ### Notice
 
 This software was produced for the U.S. Government under contract and is subject to Federal Acquisition Regulation Clause 52.227-14.
 
-See [NOTICE](NOTICE) for full details.
+See [NOTICE](NOTICE.md) for full details.
 
 © 2025 The MITRE Corporation.
