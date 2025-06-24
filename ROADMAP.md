@@ -145,7 +145,7 @@ description: Future plans and completed milestones for train-juniper
     ---
 
     - Pick an item from the roadmap
-    - Check our [Contributing Guide](CONTRIBUTING)
+    - Check our [Contributing Guide](CONTRIBUTING.md)
     - Follow our coding standards
     - Submit a pull request
 
