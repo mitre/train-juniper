@@ -1,26 +1,41 @@
 # frozen_string_literal: true
 
 require 'train-juniper/constants'
+require 'train-juniper/connection/windows_proxy'
+require 'train-juniper/connection/ssh_askpass'
 
 module TrainPlugins
   module Juniper
     # Handles bastion host proxy configuration and authentication
     module BastionProxy
+      include WindowsProxy
+      include SshAskpass
+
       # Configure bastion proxy for SSH connection
       # @param ssh_options [Hash] SSH options to modify
       def configure_bastion_proxy(ssh_options)
-        require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
-
-        # Build proxy jump string from bastion options
         bastion_user = @options[:bastion_user] || @options[:user]
         bastion_port = @options[:bastion_port]
+        bastion_password = @options[:bastion_password] || @options[:password]
 
-        proxy_jump = if bastion_port == Constants::DEFAULT_SSH_PORT
-                       "#{bastion_user}@#{@options[:bastion_host]}"
-                     else
-                       "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
-                     end
+        # On Windows with password auth, use plink.exe if available
+        if Gem.win_platform? && bastion_password && plink_available?
+          configure_plink_proxy(ssh_options, bastion_user, bastion_port, bastion_password)
+        else
+          configure_standard_proxy(ssh_options, bastion_user, bastion_port)
+        end
+      end
 
+      private
+
+      # Configure standard SSH proxy using Net::SSH::Proxy::Jump
+      # @param ssh_options [Hash] SSH options to modify
+      # @param bastion_user [String] Username for bastion
+      # @param bastion_port [Integer] Port for bastion
+      def configure_standard_proxy(ssh_options, bastion_user, bastion_port)
+        require 'net/ssh/proxy/jump' unless defined?(Net::SSH::Proxy::Jump)
+
+        proxy_jump = build_proxy_jump_string(bastion_user, bastion_port)
         @logger.debug("Using bastion host: #{proxy_jump}")
 
         # Set up automated password authentication via SSH_ASKPASS
@@ -29,49 +44,34 @@ module TrainPlugins
         ssh_options[:proxy] = Net::SSH::Proxy::Jump.new(proxy_jump)
       end
 
-      # Set up SSH_ASKPASS for bastion password authentication
-      def setup_bastion_password_auth
-        bastion_password = @options[:bastion_password] || @options[:password]
-        return unless bastion_password
+      # Configure plink.exe proxy for Windows password authentication
+      # @param ssh_options [Hash] SSH options to modify
+      # @param bastion_user [String] Username for bastion
+      # @param bastion_port [Integer] Port for bastion
+      # @param bastion_password [String] Password for bastion
+      def configure_plink_proxy(ssh_options, bastion_user, bastion_port, bastion_password)
+        require 'net/ssh/proxy/command' unless defined?(Net::SSH::Proxy::Command)
 
-        @ssh_askpass_script = create_ssh_askpass_script(bastion_password)
-        ENV['SSH_ASKPASS'] = @ssh_askpass_script
-        ENV['SSH_ASKPASS_REQUIRE'] = 'force'
-        @logger.debug('Configured SSH_ASKPASS for automated bastion authentication')
+        proxy_cmd = build_plink_proxy_command(
+          @options[:bastion_host],
+          bastion_user,
+          bastion_port,
+          bastion_password
+        )
+
+        @logger.debug('Using plink.exe for bastion proxy')
+        ssh_options[:proxy] = Net::SSH::Proxy::Command.new(proxy_cmd)
       end
 
-      # Create temporary SSH_ASKPASS script for automated password authentication
-      # @param password [String] The password to use
-      # @return [String] Path to the created script
-      def create_ssh_askpass_script(password)
-        require 'tempfile'
-
-        if Gem.win_platform?
-          # :nocov:
-          # Create Windows PowerShell script
-          script = Tempfile.new(['ssh_askpass', '.ps1'])
-          # PowerShell handles escaping better, just escape quotes
-          escaped_password = password.gsub("'", "''")
-          script.write("Write-Output '#{escaped_password}'\r\n")
-          script.close
-
-          # Create a wrapper batch file to execute PowerShell with bypass policy
-          wrapper = Tempfile.new(['ssh_askpass_wrapper', '.bat'])
-          wrapper.write("@echo off\r\npowershell.exe -ExecutionPolicy Bypass -File \"#{script.path}\"\r\n")
-          wrapper.close
-
-          @logger.debug("Created SSH_ASKPASS PowerShell script at #{script.path} with wrapper at #{wrapper.path}")
-          wrapper.path
-          # :nocov:
+      # Build proxy jump string from bastion options
+      # @param bastion_user [String] Username for bastion
+      # @param bastion_port [Integer] Port for bastion
+      # @return [String] Proxy jump string
+      def build_proxy_jump_string(bastion_user, bastion_port)
+        if bastion_port == Constants::DEFAULT_SSH_PORT
+          "#{bastion_user}@#{@options[:bastion_host]}"
         else
-          # Create Unix shell script
-          script = Tempfile.new(['ssh_askpass', '.sh'])
-          script.write("#!/bin/bash\necho '#{password}'\n")
-          script.close
-          File.chmod(0o755, script.path)
-
-          @logger.debug("Created SSH_ASKPASS script at #{script.path}")
-          script.path
+          "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
         end
       end
 
@@ -88,11 +88,7 @@ module TrainPlugins
         end
 
         # Use ProxyJump (-J) which handles password authentication properly
-        jump_host = if bastion_port == Constants::DEFAULT_SSH_PORT
-                      "#{bastion_user}@#{@options[:bastion_host]}"
-                    else
-                      "#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
-                    end
+        jump_host = build_proxy_jump_string(bastion_user, bastion_port)
         args += ['-J', jump_host]
 
         # Add SSH keys if specified

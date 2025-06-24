@@ -2,6 +2,7 @@
 
 require_relative '../helper'
 require 'train-juniper/connection'
+require 'net/ssh/proxy/command'
 
 describe 'BastionProxy module' do
   let(:connection_class) { TrainPlugins::Juniper::Connection }
@@ -40,6 +41,39 @@ describe 'BastionProxy module' do
       _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Jump)
       assert_ssh_askpass_script_created
       _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
+    end
+
+    it 'should use plink.exe on Windows when available and password provided' do
+      # :nocov:
+      skip 'Non-Windows test environment' unless Gem.win_platform?
+
+      # Mock plink availability
+      connection.stub :plink_available?, true do
+        ssh_options = {}
+
+        connection.send(:configure_bastion_proxy, ssh_options)
+
+        _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Command)
+        # SSH_ASKPASS should not be set when using plink
+        _(ENV.fetch('SSH_ASKPASS', nil)).must_be_nil
+      end
+      # :nocov:
+    end
+
+    it 'should fall back to standard proxy on Windows when plink not available' do
+      # :nocov:
+      Gem.stub :win_platform?, true do
+        connection.stub :plink_available?, false do
+          ssh_options = {}
+
+          connection.send(:configure_bastion_proxy, ssh_options)
+
+          _(ssh_options[:proxy]).must_be_instance_of(Net::SSH::Proxy::Jump)
+          assert_ssh_askpass_script_created
+          _(ENV.fetch('SSH_ASKPASS_REQUIRE', nil)).must_equal('force')
+        end
+      end
+      # :nocov:
     end
 
     it 'should configure bastion proxy with default port' do
