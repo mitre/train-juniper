@@ -50,6 +50,24 @@ Windows OpenSSH doesn't support the SSH_ASKPASS environment variable, which prev
 where plink.exe
 ```
 
+#### Accept Bastion Host Key (One-time Setup)
+Before using password authentication with a bastion host, you must accept the bastion's SSH host key:
+
+```powershell
+# Replace with your actual bastion host and username
+plink.exe -ssh your-username@your-bastion-host.com
+
+# You'll see a message like:
+# "The host key is not cached. You have no guarantee that the server 
+# is the computer you think it is... Store key in cache? (y/n)"
+
+# Type 'y' and press Enter to accept the host key
+# Then exit the connection (type 'exit' or press Ctrl+C)
+```
+
+!!! warning "Security Note"
+    Only accept the host key if you're certain you're connecting to the correct bastion host. This is a one-time setup per bastion host.
+
 #### Using Password Authentication
 When plink.exe is available, password authentication works automatically:
 
@@ -85,13 +103,30 @@ If you're still prompted for passwords:
 
 ## InSpec Usage on Windows
 
+### Testing with InSpec Shell
+After accepting the bastion host key, test your connection:
+
+```powershell
+# Test connection with InSpec detect
+inspec detect -t juniper://admin@device.example.com --password 'device-password' `
+  --bastion-host bastion.example.com `
+  --bastion-user jumpuser
+
+# Interactive shell session
+inspec shell -t juniper://admin@device.example.com --password 'device-password' `
+  --bastion-host bastion.example.com `
+  --bastion-user jumpuser
+```
+
+### Running InSpec Profiles
+
 ```powershell
 # Using train-juniper with InSpec
 inspec exec profile --target juniper://admin@device.example.com --password 'secret'
 
 # With bastion host (SSH keys recommended)
-inspec exec profile --target juniper://admin@device.example.com \
-  --bastion-host bastion.example.com \
+inspec exec profile --target juniper://admin@device.example.com `
+  --bastion-host bastion.example.com `
   --bastion-user jumpuser
 ```
 

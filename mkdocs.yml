@@ -76,6 +76,7 @@ nav:
       - Windows Bastion Setup: windows-bastion-setup.md
   - Usage:
     - Basic Usage: basic-usage.md
+    - InSpec Testing Examples: inspec-testing-examples.md
   - Documentation:
     - API Reference: api-documentation.md
     - Coverage Report: coverage-report.md
