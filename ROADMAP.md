@@ -5,7 +5,7 @@ description: Future plans and completed milestones for train-juniper
 
 # Train-Juniper Plugin Roadmap
 
-## :material-rocket-launch: Current Status: v0.7.1
+## :material-rocket-launch: Current Status: v0.7.4
 
 !!! success "Production Ready"
     Train-juniper is production-ready with **100% code coverage**, comprehensive security testing, and enterprise-grade architecture.
@@ -49,6 +49,9 @@ description: Future plans and completed milestones for train-juniper
 - ✅ **DRY improvements** - Factory methods and logging helpers
 - ✅ **Security hardening** - Command sanitization and credential protection
 - ✅ **Material for MkDocs** - Beautiful documentation with coverage reports
+- ✅ **Windows bastion support** - plink.exe integration for password authentication
+- ✅ **Cross-platform compatibility** - Full support for Linux, macOS, and Windows
+- ✅ **Enhanced error handling** - Command context in error messages
 
 ### v0.6.x Series - Production Readiness  
 - ✅ **Windows compatibility** - Fixed FFI dependency for Windows users
@@ -57,9 +60,83 @@ description: Future plans and completed milestones for train-juniper
 - ✅ **Automated release process** - git-cliff changelog generation
 - ✅ **Ruby 3.3 support** - Updated workflows for latest Ruby
 
+## :material-target: Prioritization Strategy
+
+!!! summary "Focus Areas"
+    Based on user feedback and STIG compliance requirements, we're focusing on:
+    
+    1. **Complete the InSpec Resource Pack** - Already 52% done, critical for STIG compliance
+    2. **Enhanced Mock Mode** - Essential for testing resources without devices
+    3. **Configuration Mode** - Required for several STIG controls
+    4. **Better Debugging** - Helps users troubleshoot connection issues
+    
+    Features in "Wait for Demand" are valuable but should be driven by specific user needs.
+
+!!! info "Estimated Timeline"
+    - **Q3 2025**: Complete InSpec Resource Pack v1.0
+    - **Q3 2025**: Enhanced mock mode with device profiles
+    - **Q4 2025**: Configuration mode support
+    - **Q4 2025**: Advanced debugging features
+
 ## :material-road: Future Enhancements
 
-### :material-network: Advanced Connectivity
+### :material-target: High Priority - Should Target
+
+!!! important "These features provide immediate value and have clear use cases"
+
+#### :material-library: InSpec Resource Pack (In Progress)
+
+!!! success "Already 52% Complete"
+    The InSpec resource pack is actively being developed to support STIG compliance:
+    
+    **Core Resources (Ready for testing):**
+    - ✅ `juniper_system_alarms` - System alarm monitoring
+    - ✅ `juniper_system_boot_messages` - Boot message analysis
+    - ✅ `juniper_system_core_dumps` - Core dump detection
+    - ✅ `juniper_system_ntp` - NTP configuration validation
+    - ✅ `juniper_system_services` - Service state verification
+    - ✅ `juniper_system_storage` - Storage utilization checks
+    - ✅ `juniper_system_uptime` - System uptime tracking
+    - ✅ `juniper_system_users` - User account auditing
+    
+    **Priority Resources (Next targets):**
+    - `juniper_security_policies` - Firewall policy validation
+    - `juniper_interfaces` - Interface configuration checks
+    - `juniper_routing_options` - Routing security validation
+    - `juniper_snmp` - SNMP configuration auditing
+
+#### :material-test-tube: Enhanced Mock Mode
+
+- **Custom mock data loading** from YAML/JSON files
+- **Device-specific mocks** (MX240, EX4300, QFX5100, vSRX)
+- **Scenario-based mocking** for different compliance states
+- **Mock data validation** against real device schemas
+
+#### :material-cog: Configuration Mode Support
+
+!!! info "Required for STIG compliance"
+    Several STIG controls require configuration verification:
+    
+    ```ruby
+    # Example use case
+    describe juniper_configuration do
+      its('system login message') { should match /DoD Notice and Consent Banner/ }
+      its('protocols ospf') { should_not be_configured }
+    end
+    ```
+
+#### :material-bug: Enhanced Debugging & Diagnostics
+
+- **Connection diagnostics** command for troubleshooting
+- **Command history** tracking for debugging
+- **Performance metrics** for slow commands
+- **Verbose error messages** with suggested fixes
+
+### :material-clock: Lower Priority - Wait for Demand
+
+!!! info "These features are valuable but should wait for user requests"
+
+#### :material-network: Advanced Connectivity
 
 !!! info "NETCONF Transport"
     Add NETCONF protocol support as an alternative to SSH
@@ -93,45 +170,24 @@ description: Future plans and completed milestones for train-juniper
     - Error handling improvements
     - Multi-line output parsing
 
-### :material-test-tube: Developer Experience
+#### :material-speedometer: Performance & Profiling
 
-#### Enhanced Mock Mode
-- :material-database: Custom mock data files
-- :material-devices: Platform-specific mocks (MX, EX, QFX)
-- :material-file-tree: Expanded command coverage
-- :material-api: Mock data API
+- Performance profiling tools
+- Command timing metrics
+- Connection pooling for multiple devices
+- Batch command execution
 
-#### Debugging & Performance
-- :material-bug: Advanced debug logging
-- :material-speedometer: Performance profiling
-- :material-chart-timeline: Command timing metrics
-- :material-magnify: Connection diagnostics
+#### :material-puzzle: Protocol & Feature Extensions
 
-### :material-library: InSpec Resources
-
-!!! tip "Juniper Resource Pack"
-    Planned InSpec resources for common compliance checks:
-    
-    - `juniper_interface` - Network interface validation
-    - `juniper_route` - Routing table verification
-    - `juniper_firewall` - Security policy checks
-    - `juniper_user` - User account auditing
-    - `juniper_ntp` - Time synchronization
-    - `juniper_syslog` - Logging configuration
-
-### :material-account-group: Community Wishlist
-
-<div class="annotate" markdown>
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| BGP Support | Validate BGP configurations | :material-progress-clock: Planned |
-| OSPF Support | Check OSPF neighbor states | :material-progress-clock: Planned |
-| VLAN Validation | Verify VLAN configurations | :material-progress-clock: Planned |
-| Hardware Info | Chassis and component details | :material-progress-clock: Planned |
-| Config Diff | Compare running vs candidate | :material-progress-clock: Planned |
-
-</div>
+| Feature | Description | Rationale |
+|---------|-------------|-----------|
+| BGP Support | Validate BGP configurations | Wait for specific use case |
+| OSPF Support | Check OSPF neighbor states | Wait for specific use case |
+| VLAN Validation | Verify VLAN configurations | Wait for specific use case |
+| Hardware Info | Chassis and component details | Wait for specific use case |
+| Config Diff | Compare running vs candidate | Part of config mode support |
+| Custom RPC calls | Direct JunOS RPC execution | Complex implementation |
+| Advanced file operations | Upload/download configs | Security implications |
 
 ## :material-handshake: How to Contribute
 
