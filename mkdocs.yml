@@ -7,6 +7,12 @@ repo_name: mitre/train-juniper
 repo_url: https://github.com/mitre/train-juniper
 edit_uri: edit/main/docs/
 
+# Exclude directories that are in .gitignore
+exclude_docs: |
+  ai-assistant-research/
+  session-history/
+  archive/
+
 theme:
   name: material
   palette:
@@ -39,6 +45,11 @@ plugins:
   - search
   - git-revision-date-localized:
       enable_creation_date: true
+      enable_git_follow: false
+      exclude:
+        - ai-assistant-research/*
+        - session-history/*
+        - archive/*
 
 markdown_extensions:
   - admonition
@@ -84,7 +95,11 @@ nav:
     - Contributing: CONTRIBUTING.md
     - Documentation Guide: DOCUMENTATION_GUIDE.md
     - Release Process: RELEASE_PROCESS.md
+    - MCP Integration:
+      - MCP Setup Guide: JUNIPER_MCP_SETUP.md
+      - MCP with Jumpbox: JUNIPER_MCP_WITH_JUMPBOX.md
     - Technical Research:
+      - XML/RPC Learnings: JUNIPER_XML_RPC_LEARNINGS.md
       - Windows SSH Research: development/windows-ssh-research.md
       - Windows Development Guide: development/windows-development-guide.md
   - Project:
