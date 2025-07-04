@@ -391,4 +391,161 @@ describe TrainPlugins::Juniper::Connection do
       _(connection.inspect).must_equal connection.to_s
     end
   end
+
+  describe '#uri' do
+    it 'returns standard juniper URI for direct connection' do
+      connection = connection_class.new(mock_options)
+      _(connection.uri).must_equal 'juniper://admin@test-router:22'
+    end
+
+    it 'includes bastion information when using jump host' do
+      bastion_options = mock_options.merge(
+        bastion_host: 'jump.example.com',
+        bastion_user: 'jumpuser',
+        bastion_port: 2222
+      )
+      connection = connection_class.new(bastion_options)
+      expected_uri = 'juniper://admin@test-router:22?via=jumpuser@jump.example.com:2222'
+      _(connection.uri).must_equal expected_uri
+    end
+
+    it 'uses default port 22 for bastion when not specified' do
+      bastion_options = mock_options.merge(
+        bastion_host: 'jump.example.com',
+        bastion_user: 'jumpuser'
+      )
+      connection = connection_class.new(bastion_options)
+      expected_uri = 'juniper://admin@test-router:22?via=jumpuser@jump.example.com:22'
+      _(connection.uri).must_equal expected_uri
+    end
+
+    it 'uses device user for bastion when bastion_user not specified' do
+      bastion_options = mock_options.merge(
+        bastion_host: 'jump.example.com'
+      )
+      connection = connection_class.new(bastion_options)
+      expected_uri = 'juniper://admin@test-router:22?via=admin@jump.example.com:22'
+      _(connection.uri).must_equal expected_uri
+    end
+
+    it 'handles custom device port' do
+      custom_port_options = mock_options.merge(port: 2222)
+      connection = connection_class.new(custom_port_options)
+      _(connection.uri).must_equal 'juniper://admin@test-router:2222'
+    end
+  end
+
+  describe '#unique_identifier' do
+    let(:connection) { connection_class.new(mock_options) }
+
+    it 'returns hostname in mock mode' do
+      _(connection.unique_identifier).must_equal 'test-router'
+    end
+
+    it 'returns hostname when not connected' do
+      # Create connection that skips connecting
+      non_connected_options = mock_options.merge(skip_connect: true, mock: false)
+      connection = connection_class.new(non_connected_options)
+
+      # Mock connected? to return false
+      connection.define_singleton_method(:connected?) { false }
+
+      _(connection.unique_identifier).must_equal 'test-router'
+    end
+
+    it 'extracts device serial number when available' do
+      # Create connection in non-mock mode
+      non_mock_options = mock_options.merge(mock: false, skip_connect: true)
+      connection = connection_class.new(non_mock_options)
+
+      # Mock a connection that's connected
+      connection.define_singleton_method(:connected?) { true }
+
+      # Mock the show chassis hardware command to return serial number
+      connection.define_singleton_method(:run_command_via_connection) do |cmd|
+        if cmd.include?('show chassis hardware')
+          stdout = "Chassis                                REV 07   750-028467     ABCD123456\n"
+          Train::Extras::CommandResult.new(stdout, '', 0)
+        else
+          Train::Extras::CommandResult.new('', '', 1)
+        end
+      end
+
+      _(connection.unique_identifier).must_equal 'ABCD123456'
+    end
+
+    it 'handles different serial number formats' do
+      # Create connection in non-mock mode
+      non_mock_options = mock_options.merge(mock: false, skip_connect: true)
+      connection = connection_class.new(non_mock_options)
+
+      connection.define_singleton_method(:connected?) { true }
+
+      # Test format with "Serial number:" prefix
+      connection.define_singleton_method(:run_command_via_connection) do |cmd|
+        if cmd.include?('show chassis hardware')
+          stdout = "Serial number: SRX240-12345\n"
+          Train::Extras::CommandResult.new(stdout, '', 0)
+        else
+          Train::Extras::CommandResult.new('', '', 1)
+        end
+      end
+
+      _(connection.unique_identifier).must_equal 'SRX240-12345'
+    end
+
+    it 'falls back to hostname when serial not found' do
+      # Create connection in non-mock mode
+      non_mock_options = mock_options.merge(mock: false, skip_connect: true)
+      connection = connection_class.new(non_mock_options)
+
+      connection.define_singleton_method(:connected?) { true }
+
+      # Mock command that doesn't return valid serial
+      connection.define_singleton_method(:run_command_via_connection) do |cmd|
+        if cmd.include?('show chassis hardware')
+          stdout = "No chassis information available\n"
+          Train::Extras::CommandResult.new(stdout, '', 0)
+        else
+          Train::Extras::CommandResult.new('', '', 1)
+        end
+      end
+
+      _(connection.unique_identifier).must_equal 'test-router'
+    end
+
+    it 'falls back to hostname when command fails' do
+      # Create connection in non-mock mode
+      non_mock_options = mock_options.merge(mock: false, skip_connect: true)
+      connection = connection_class.new(non_mock_options)
+
+      connection.define_singleton_method(:connected?) { true }
+
+      # Mock command that fails
+      connection.define_singleton_method(:run_command_via_connection) do |cmd|
+        if cmd.include?('show chassis hardware')
+          Train::Extras::CommandResult.new('', 'command error', 1)
+        else
+          Train::Extras::CommandResult.new('', '', 1)
+        end
+      end
+
+      _(connection.unique_identifier).must_equal 'test-router'
+    end
+
+    it 'handles exceptions gracefully' do
+      # Create connection in non-mock mode
+      non_mock_options = mock_options.merge(mock: false, skip_connect: true)
+      connection = connection_class.new(non_mock_options)
+
+      connection.define_singleton_method(:connected?) { true }
+
+      # Mock command that raises exception
+      connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        raise StandardError, 'Connection lost'
+      end
+
+      _(connection.unique_identifier).must_equal 'test-router'
+    end
+  end
 end

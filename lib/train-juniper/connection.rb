@@ -187,6 +187,61 @@ module TrainPlugins
         false
       end
 
+      # Required by Train framework for node identification
+      # @return [String] URI that uniquely identifies this connection
+      # @example Direct connection
+      #   "juniper://admin@device.example.com:22"
+      # @example Bastion connection
+      #   "juniper://admin@device.example.com:22?via=jumpuser@bastion.example.com:2222"
+      def uri
+        base_uri = "juniper://#{@options[:user]}@#{@options[:host]}:#{@options[:port]}"
+
+        # Include bastion information if connecting through a jump host
+        if @options[:bastion_host]
+          bastion_user = @options[:bastion_user] || @options[:user]
+          bastion_port = @options[:bastion_port] || 22
+          bastion_info = "via=#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
+          "#{base_uri}?#{bastion_info}"
+        else
+          base_uri
+        end
+      end
+
+      # Optional method for better UUID generation using device-specific identifiers
+      # @return [String] Unique identifier for this device/connection
+      # @note Tries to get Juniper device serial number, falls back to hostname
+      def unique_identifier
+        # Don't attempt device detection in mock mode or if not connected
+        return @options[:host] if @options[:mock] || !connected?
+
+        # Try to get device serial number from chassis hardware info
+        result = run_command_via_connection('show chassis hardware | match Chassis')
+        if result&.exit_status&.zero? && !result.stdout.empty?
+          # Extract serial number from output like:
+          # "Chassis                                REV 07   750-028467     ABCD1234"
+          # or "Serial number: ABCD1234"
+
+          # Try explicit "Serial number:" format first
+          if (match = result.stdout.match(/Serial\s*(?:number)?:?\s*([A-Z0-9][A-Z0-9-]{5,})/i))
+            return match[1]
+          end
+
+          # Try chassis hardware line format - look for serial numbers in specific patterns
+          # Common Juniper serial formats: ABCD123456, SRX-123456, 750-028467, etc.
+          if (match = result.stdout.match(/Chassis.*?([A-Z0-9]{3,4}-?[0-9]{6,}|[A-Z]{2,4}[0-9]{6,}|[0-9]{3}-[0-9]{6})\s*$/i))
+            serial = match[1]
+            # Additional validation: ensure it contains both letters/numbers and looks like hardware serial
+            return serial if serial.length.between?(6, 20) && serial.match?(/[0-9]/) && serial.match?(/[A-Z0-9]/i)
+          end
+        end
+
+        # Fallback to hostname if device serial not available
+        @options[:host]
+      rescue StandardError => e
+        logger&.debug("Could not detect device unique identifier: #{e.message}")
+        @options[:host]
+      end
+
       # List of sensitive option keys to redact in logs
       SENSITIVE_OPTIONS = %i[password bastion_password key_files proxy_command].freeze
       private_constant :SENSITIVE_OPTIONS
