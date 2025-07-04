@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-07-04
+
+### Documentation
+
+- Update roadmap with v0.7.4 accomplishments and clear prioritization
+
+### Fixed
+
+- Resolve UUID warning and migrate to XML parsing ([#4](https://github.com/mitre/train-juniper/issues/4))
+
+### Refactor
+
+- Improve code quality based on deep review
+
+### Testing
+
+- Achieve 100% line coverage with cross-platform Windows plink test
+
 ## [0.7.4] - 2025-06-24
 
 ### Added
@@ -17,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix MkDocs link warnings
 - Add host key acceptance instructions and InSpec testing examples
 - Improve Windows documentation and standardize on inspec shell
+
+### Fixed
+
+- Clean up ENV in Windows plink test to prevent CI failures
+- Remove trailing whitespace to pass linting
 
 ### Miscellaneous Tasks
 
