@@ -461,10 +461,20 @@ describe TrainPlugins::Juniper::Connection do
       # Mock a connection that's connected
       connection.define_singleton_method(:connected?) { true }
 
-      # Mock the show chassis hardware command to return serial number
+      # Mock the show chassis hardware command to return XML with serial number
       connection.define_singleton_method(:run_command_via_connection) do |cmd|
         if cmd.include?('show chassis hardware')
-          stdout = "Chassis                                REV 07   750-028467     ABCD123456\n"
+          stdout = <<~XML
+            <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+              <chassis-inventory xmlns="http://xml.juniper.net/junos/12.1X47/junos-chassis">
+                <chassis junos:style="inventory">
+                  <name>Chassis</name>
+                  <serial-number>ABCD123456</serial-number>
+                  <description>SRX240H2</description>
+                </chassis>
+              </chassis-inventory>
+            </rpc-reply>
+          XML
           Train::Extras::CommandResult.new(stdout, '', 0)
         else
           Train::Extras::CommandResult.new('', '', 1)
@@ -481,10 +491,20 @@ describe TrainPlugins::Juniper::Connection do
 
       connection.define_singleton_method(:connected?) { true }
 
-      # Test format with "Serial number:" prefix
+      # Test different XML format
       connection.define_singleton_method(:run_command_via_connection) do |cmd|
         if cmd.include?('show chassis hardware')
-          stdout = "Serial number: SRX240-12345\n"
+          stdout = <<~XML
+            <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+              <chassis-inventory xmlns="http://xml.juniper.net/junos/12.1X47/junos-chassis">
+                <chassis junos:style="inventory">
+                  <name>Chassis</name>
+                  <serial-number>SRX240-12345</serial-number>
+                  <description>SRX240H2</description>
+                </chassis>
+              </chassis-inventory>
+            </rpc-reply>
+          XML
           Train::Extras::CommandResult.new(stdout, '', 0)
         else
           Train::Extras::CommandResult.new('', '', 1)

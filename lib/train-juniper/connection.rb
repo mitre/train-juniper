@@ -211,35 +211,12 @@ module TrainPlugins
       # @return [String] Unique identifier for this device/connection
       # @note Tries to get Juniper device serial number, falls back to hostname
       def unique_identifier
-        # Don't attempt device detection in mock mode or if not connected
-        return @options[:host] if @options[:mock] || !connected?
+        # Don't attempt device detection in mock mode
+        return @options[:host] if @options[:mock]
 
-        # Try to get device serial number from chassis hardware info
-        result = run_command_via_connection('show chassis hardware | match Chassis')
-        if result&.exit_status&.zero? && !result.stdout.empty?
-          # Extract serial number from output like:
-          # "Chassis                                REV 07   750-028467     ABCD1234"
-          # or "Serial number: ABCD1234"
-
-          # Try explicit "Serial number:" format first
-          if (match = result.stdout.match(/Serial\s*(?:number)?:?\s*([A-Z0-9][A-Z0-9-]{5,})/i))
-            return match[1]
-          end
-
-          # Try chassis hardware line format - look for serial numbers in specific patterns
-          # Common Juniper serial formats: ABCD123456, SRX-123456, 750-028467, etc.
-          if (match = result.stdout.match(/Chassis.*?([A-Z0-9]{3,4}-?[0-9]{6,}|[A-Z]{2,4}[0-9]{6,}|[0-9]{3}-[0-9]{6})\s*$/i))
-            serial = match[1]
-            # Additional validation: ensure it contains both letters/numbers and looks like hardware serial
-            return serial if serial.length.between?(6, 20) && serial.match?(/[0-9]/) && serial.match?(/[A-Z0-9]/i)
-          end
-        end
-
-        # Fallback to hostname if device serial not available
-        @options[:host]
-      rescue StandardError => e
-        logger&.debug("Could not detect device unique identifier: #{e.message}")
-        @options[:host]
+        # Use the platform module's serial detection which follows DRY principle
+        serial = detect_junos_serial
+        serial || @options[:host]
       end
 
       # List of sensitive option keys to redact in logs

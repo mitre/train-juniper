@@ -139,38 +139,56 @@ describe 'Platform Detection Integration' do
     let(:connection) { TrainPlugins::Juniper::Connection.new(connection_options) }
 
     it 'should handle nil output gracefully' do
-      version = connection.send(:extract_version_from_output, nil)
+      version = connection.send(:extract_version_from_xml, nil)
       _(version).must_be_nil
     end
 
     it 'should handle empty output gracefully' do
-      version = connection.send(:extract_version_from_output, '')
+      version = connection.send(:extract_version_from_xml, '')
       _(version).must_be_nil
     end
 
-    it 'should extract version from mixed case output' do
-      output = 'JUNOS software release [21.4R3.15]'
-      version = connection.send(:extract_version_from_output, output)
+    it 'should extract version from XML output' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/21.4R3/junos">
+          <software-information>
+            <host-name>test-device</host-name>
+            <product-model>SRX300</product-model>
+            <junos-version>21.4R3.15</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      version = connection.send(:extract_version_from_xml, output)
       _(version).must_equal('21.4R3.15')
     end
 
-    it 'should prefer specific patterns over generic ones' do
-      output = 'Some text 1.0.0 Junos: 20.4R1.12 and more 2.0.0'
-      version = connection.send(:extract_version_from_output, output)
+    it 'should extract version from XML with namespace' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/20.4R1/junos">
+          <software-information>
+            <host-name>test-device</host-name>
+            <product-model>MX960</product-model>
+            <junos-version>20.4R1.12</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      version = connection.send(:extract_version_from_xml, output)
       _(version).must_equal('20.4R1.12')
     end
 
     it 'should handle complex multi-line version output' do
-      complex_output = <<~OUTPUT
-        Hostname: test-device
-        Model: MX960
-        Junos: 19.4R3.11
-        JUNOS Base OS boot [19.4R3.11]
-        JUNOS Base OS Software Suite [19.4R3.11]
-        JUNOS Kernel Software Suite [19.4R3.11]
-      OUTPUT
+      complex_output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/19.4R3/junos">
+          <software-information>
+            <host-name>test-device</host-name>
+            <product-model>MX960</product-model>
+            <product-name>mx960</product-name>
+            <junos-version>19.4R3.11</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
 
-      version = connection.send(:extract_version_from_output, complex_output)
+      version = connection.send(:extract_version_from_xml, complex_output)
       _(version).must_equal('19.4R3.11')
     end
   end
