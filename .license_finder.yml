@@ -1,0 +1,9 @@
+---
+# License Finder configuration
+# This gem only includes Ruby dependencies in the distributed package
+# Python dependencies are for documentation building only
+
+# Disable Python package managers entirely
+# requirements.txt is only for local documentation building
+pip_command: false
+python_command: false

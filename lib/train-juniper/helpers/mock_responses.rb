@@ -77,7 +77,8 @@ module TrainPlugins
         # Check if command includes display modifiers
         if cmd.include?('| display xml')
           # Handle XML output requests
-          base_cmd = cmd.gsub(/\s*\|\s*display\s+xml.*$/, '').strip
+          # Use simple string split to avoid ReDoS vulnerability
+          base_cmd = cmd.split('|').first.strip
 
           case base_cmd
           when 'show chassis hardware'
