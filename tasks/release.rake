@@ -215,6 +215,10 @@ end
 # Override the default Bundler release task since we use GitHub Actions
 desc 'Tag and push release (GitHub Actions handles gem publication)'
 task :release do
+  # Ensure we're on main branch
+  current_branch = `git rev-parse --abbrev-ref HEAD`.strip
+  abort "Error: Must be on main branch to release (currently on #{current_branch})" unless current_branch == 'main'
+  
   # Get current version
   version = File.read('lib/train-juniper/version.rb')[/VERSION = ['"](.+)['"]/, 1]
   tag = "v#{version}"
