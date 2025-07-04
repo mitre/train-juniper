@@ -9,6 +9,20 @@ The train-juniper project uses a semi-automated release process that follows the
 - Changes are committed and tagged locally
 - GitHub Actions handles gem publication when tags are pushed
 
+## Release Workflow Options
+
+### Option A: PR-Based Workflow (Recommended)
+
+When working with pull requests:
+
+1. **Complete development on feature branch**
+2. **Create and merge PR to main**
+3. **Then follow release steps from main branch**
+
+### Option B: Direct to Main (Legacy)
+
+For hotfixes or when working directly on main branch.
+
 ## Prerequisites
 
 1. **Ensure you have git-cliff installed** (for changelog generation):
@@ -16,7 +30,7 @@ The train-juniper project uses a semi-automated release process that follows the
    brew install git-cliff
    ```
 
-2. **Ensure you're on the main branch with a clean working directory**:
+2. **For PR workflow - After PR is merged, ensure you're on the main branch**:
    ```bash
    git checkout main
    git pull origin main
@@ -181,6 +195,65 @@ gem push train-juniper-{version}.gem
 - Check the [Actions tab](https://github.com/mitre/train-juniper/actions)
 - Ensure trusted publishing is configured on RubyGems.org
 - Verify all tests pass locally first
+
+## PR-Based Release Workflow (Detailed)
+
+When using pull requests, the workflow is:
+
+### Development Phase
+1. **Create feature branch** from main
+   ```bash
+   git checkout -b fix/issue-description
+   ```
+
+2. **Develop and test** on feature branch
+   ```bash
+   bundle exec rake test
+   bundle exec rake lint
+   ```
+
+3. **Push branch and create PR**
+   ```bash
+   git push -u origin fix/issue-description
+   gh pr create  # or use GitHub web UI
+   ```
+
+4. **Wait for PR checks** to pass (CI/CD)
+
+5. **Get PR reviewed and approved**
+
+### Release Phase (After PR Merge)
+1. **Switch to main and pull latest**
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+
+2. **Decide on version bump** based on changes:
+   - Multiple PRs with features → minor bump
+   - Only bug fixes → patch bump
+   - Breaking changes → major bump
+
+3. **Run release preparation**
+   ```bash
+   bundle exec rake release:patch  # or :minor or :major
+   ```
+
+4. **Review and push**
+   ```bash
+   git push origin main
+   ```
+
+5. **Create tag and publish**
+   ```bash
+   bundle exec rake release
+   ```
+
+### Key Differences from Direct Workflow
+- Never run `rake release:*` on feature branches
+- Version bump happens AFTER merge, not before
+- Changelog captures all PRs merged since last release
+- More traceable history through PR references
 
 ## Version History
 

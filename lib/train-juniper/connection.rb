@@ -187,6 +187,38 @@ module TrainPlugins
         false
       end
 
+      # Required by Train framework for node identification
+      # @return [String] URI that uniquely identifies this connection
+      # @example Direct connection
+      #   "juniper://admin@device.example.com:22"
+      # @example Bastion connection
+      #   "juniper://admin@device.example.com:22?via=jumpuser@bastion.example.com:2222"
+      def uri
+        base_uri = "juniper://#{@options[:user]}@#{@options[:host]}:#{@options[:port]}"
+
+        # Include bastion information if connecting through a jump host
+        if @options[:bastion_host]
+          bastion_user = @options[:bastion_user] || @options[:user]
+          bastion_port = @options[:bastion_port] || 22
+          bastion_info = "via=#{bastion_user}@#{@options[:bastion_host]}:#{bastion_port}"
+          "#{base_uri}?#{bastion_info}"
+        else
+          base_uri
+        end
+      end
+
+      # Optional method for better UUID generation using device-specific identifiers
+      # @return [String] Unique identifier for this device/connection
+      # @note Tries to get Juniper device serial number, falls back to hostname
+      def unique_identifier
+        # Don't attempt device detection in mock mode
+        return @options[:host] if @options[:mock]
+
+        # Use the platform module's serial detection which follows DRY principle
+        serial = detect_junos_serial
+        serial || @options[:host]
+      end
+
       # List of sensitive option keys to redact in logs
       SENSITIVE_OPTIONS = %i[password bastion_password key_files proxy_command].freeze
       private_constant :SENSITIVE_OPTIONS

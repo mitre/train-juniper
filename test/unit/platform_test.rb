@@ -46,10 +46,14 @@ describe TrainPlugins::Juniper::Platform do
   describe 'version detection' do
     it 'should detect standard JunOS version format' do
       version_output = <<~OUTPUT
-        Hostname: lab-srx
-        Model: SRX240H2
-        Junos: 12.1X47-D15.4
-        JUNOS Software Release [12.1X47-D15.4]
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -59,9 +63,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should cache version detection results' do
       version_output = <<~OUTPUT
-        Hostname: lab-srx
-        Model: SRX240H2
-        Junos: 12.1X47-D15.4
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -86,9 +95,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should detect JUNOS Software Release format' do
       version_output = <<~OUTPUT
-        JUNOS Software Release [21.4R3.15]
-        Model: srx300
-        Package: [21.4R3.15]
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/21.4R3/junos">
+          <software-information>
+            <host-name>srx300</host-name>
+            <product-model>srx300</product-model>
+            <product-name>srx300</product-name>
+            <junos-version>21.4R3.15</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -98,10 +112,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should detect simple Junos version format' do
       version_output = <<~OUTPUT
-        Hostname: firewall01
-        Model: SRX1500
-        Junos: 23.4R1.9
-        Base OS boot [23.4R1.9]
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/23.4R1/junos">
+          <software-information>
+            <host-name>firewall01</host-name>
+            <product-model>SRX1500</product-model>
+            <product-name>srx1500</product-name>
+            <junos-version>23.4R1.9</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -123,17 +141,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should extract version from complex output' do
       complex_output = <<~OUTPUT
-        Hostname: core-router
-        Model: MX960
-        Junos: 20.4R3.8
-        JUNOS Base OS boot [20.4R3.8]
-        JUNOS Base OS Software Suite [20.4R3.8]
-        JUNOS Kernel Software Suite [20.4R3.8]
-        JUNOS Crypto Software Suite [20.4R3.8]
-        JUNOS Packet Forwarding Engine Support (MX Common) [20.4R3.8]
-        JUNOS Packet Forwarding Engine Support (M/T Common) [20.4R3.8]
-        JUNOS Online Documentation [20.4R3.8]
-        JUNOS Routing Software Suite [20.4R3.8]
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/20.4R3/junos">
+          <software-information>
+            <host-name>core-router</host-name>
+            <product-model>MX960</product-model>
+            <product-name>mx960</product-name>
+            <junos-version>20.4R3.8</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(complex_output)
@@ -142,35 +157,37 @@ describe TrainPlugins::Juniper::Platform do
     end
   end
 
-  describe 'version extraction patterns' do
+  describe 'version extraction from XML' do
     let(:mock_connection) { connection.new('') }
 
-    it 'should extract version from JUNOS Software Release pattern' do
-      output = 'JUNOS Software Release [19.1R1.6]'
-      version = mock_connection.send(:extract_version_from_output, output)
+    it 'should extract version from XML output' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>19.1R1.6</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      version = mock_connection.send(:extract_version_from_xml, output)
       _(version).must_equal('19.1R1.6')
     end
 
-    it 'should extract version from Junos: pattern' do
-      output = 'Junos: 18.4R2.7'
-      version = mock_connection.send(:extract_version_from_output, output)
-      _(version).must_equal('18.4R2.7')
-    end
-
-    it 'should extract version from general version pattern' do
-      output = 'Some text with version 22.3R1.1 embedded'
-      version = mock_connection.send(:extract_version_from_output, output)
-      _(version).must_equal('22.3R1.1')
-    end
-
-    it 'should return nil when no version pattern matches' do
-      output = 'No version information here'
-      version = mock_connection.send(:extract_version_from_output, output)
+    it 'should handle empty XML output' do
+      version = mock_connection.send(:extract_version_from_xml, '')
       _(version).must_be_nil
     end
 
-    it 'should handle empty output' do
-      version = mock_connection.send(:extract_version_from_output, '')
+    it 'should handle nil XML output' do
+      version = mock_connection.send(:extract_version_from_xml, nil)
+      _(version).must_be_nil
+    end
+
+    it 'should handle malformed XML gracefully' do
+      output = '<invalid>xml<content'
+      version = mock_connection.send(:extract_version_from_xml, output)
       _(version).must_be_nil
     end
   end
@@ -178,9 +195,14 @@ describe TrainPlugins::Juniper::Platform do
   describe 'architecture detection' do
     it 'should detect SRX model as x86_64' do
       version_output = <<~OUTPUT
-        Hostname: lab-srx
-        Model: SRX240H2
-        Junos: 12.1X47-D15.4
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -190,9 +212,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should detect MX model as x86_64' do
       version_output = <<~OUTPUT
-        Hostname: core-router
-        Model: MX960
-        Junos: 20.4R3.8
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/20.4R3/junos">
+          <software-information>
+            <host-name>core-router</host-name>
+            <product-model>MX960</product-model>
+            <product-name>mx960</product-name>
+            <junos-version>20.4R3.8</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -202,9 +229,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should detect EX model as arm64' do
       version_output = <<~OUTPUT
-        Hostname: switch01
-        Model: EX4300-48T
-        Junos: 18.4R2.7
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/18.4R2/junos">
+          <software-information>
+            <host-name>switch01</host-name>
+            <product-model>EX4300-48T</product-model>
+            <product-name>ex4300-48t</product-name>
+            <junos-version>18.4R2.7</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -226,9 +258,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should cache architecture detection results' do
       version_output = <<~OUTPUT
-        Hostname: lab-srx
-        Model: SRX240H2
-        Junos: 12.1X47-D15.4
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -253,9 +290,14 @@ describe TrainPlugins::Juniper::Platform do
 
     it 'should share cached result between version and architecture detection' do
       version_output = <<~OUTPUT
-        Hostname: lab-srx
-        Model: SRX240H2
-        Junos: 12.1X47-D15.4
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -272,43 +314,93 @@ describe TrainPlugins::Juniper::Platform do
       _(version).must_equal('12.1X47-D15.4')
       _(call_count).must_equal(1)
 
-      # Architecture detection should reuse the cached result
+      # Architecture detection will make another call (different command)
       arch = test_connection.send(:detect_junos_architecture)
       _(arch).must_equal('x86_64')
-      _(call_count).must_equal(1) # Should not increase - shared cache
+      _(call_count).must_equal(2) # Different commands now
 
       # Subsequent calls should also use cache
       version2 = test_connection.send(:detect_junos_version)
       arch2 = test_connection.send(:detect_junos_architecture)
       _(version2).must_equal('12.1X47-D15.4')
       _(arch2).must_equal('x86_64')
-      _(call_count).must_equal(1) # Still should not increase
+      _(call_count).must_equal(2) # Still should not increase
     end
   end
 
-  describe 'architecture extraction patterns' do
+  describe 'architecture extraction from XML' do
     let(:mock_connection) { connection.new('') }
 
-    it 'should extract architecture from SRX model' do
-      output = 'Model: SRX1500'
-      arch = mock_connection.send(:extract_architecture_from_output, output)
+    it 'should extract architecture from SRX model in XML' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX1500</product-model>
+            <product-name>srx1500</product-name>
+            <junos-version>19.1R1.6</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      arch = mock_connection.send(:extract_architecture_from_xml, output)
       _(arch).must_equal('x86_64')
     end
 
-    it 'should extract architecture from QFX model' do
-      output = 'Model: QFX5100-48S'
-      arch = mock_connection.send(:extract_architecture_from_output, output)
+    it 'should extract architecture from QFX model in XML' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>switch01</host-name>
+            <product-model>QFX5100-48S</product-model>
+            <product-name>qfx5100-48s</product-name>
+            <junos-version>18.4R2.7</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      arch = mock_connection.send(:extract_architecture_from_xml, output)
       _(arch).must_equal('x86_64')
     end
 
-    it 'should return nil when no architecture pattern matches' do
-      output = 'No model information here'
-      arch = mock_connection.send(:extract_architecture_from_output, output)
+    it 'should extract architecture from EX model as arm64' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>switch02</host-name>
+            <product-model>EX4300-48T</product-model>
+            <product-name>ex4300-48t</product-name>
+            <junos-version>18.4R2.7</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      arch = mock_connection.send(:extract_architecture_from_xml, output)
+      _(arch).must_equal('arm64')
+    end
+
+    it 'should return nil when no model in XML' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>unknown</host-name>
+          </software-information>
+        </rpc-reply>
+      XML
+      arch = mock_connection.send(:extract_architecture_from_xml, output)
       _(arch).must_be_nil
     end
 
-    it 'should handle empty output for architecture' do
-      arch = mock_connection.send(:extract_architecture_from_output, '')
+    it 'should handle empty XML output for architecture' do
+      arch = mock_connection.send(:extract_architecture_from_xml, '')
+      _(arch).must_be_nil
+    end
+
+    it 'should handle nil XML output for architecture' do
+      arch = mock_connection.send(:extract_architecture_from_xml, nil)
+      _(arch).must_be_nil
+    end
+
+    it 'should handle malformed XML for architecture' do
+      output = '<invalid>xml'
+      arch = mock_connection.send(:extract_architecture_from_xml, output)
       _(arch).must_be_nil
     end
   end
@@ -316,9 +408,14 @@ describe TrainPlugins::Juniper::Platform do
   describe 'platform method caching' do
     it 'should cache platform detection results across multiple calls' do
       version_output = <<~OUTPUT
-        Hostname: lab-srx
-        Model: SRX240H2
-        Junos: 12.1X47-D15.4
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>lab-srx</host-name>
+            <product-model>SRX240H2</product-model>
+            <product-name>srx240h2</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
       OUTPUT
 
       test_connection = connection.new(version_output)
@@ -345,23 +442,150 @@ describe TrainPlugins::Juniper::Platform do
         }
       end
 
-      # First platform call should execute command once
+      # First platform call should execute commands
       platform1 = test_connection.platform
       _(platform1[:release]).must_equal('12.1X47-D15.4')
       _(platform1[:arch]).must_equal('x86_64')
-      _(call_count).must_equal(1) # Single command execution for both version and arch
+      _(call_count).must_equal(2) # Two commands now (version and arch)
 
       # Second platform call should use cached results
       platform2 = test_connection.platform
       _(platform2[:release]).must_equal('12.1X47-D15.4')
       _(platform2[:arch]).must_equal('x86_64')
-      _(call_count).must_equal(1) # Should not increase - cached
+      _(call_count).must_equal(2) # Should not increase - cached
 
       # Third platform call should also use cache
       platform3 = test_connection.platform
       _(platform3[:release]).must_equal('12.1X47-D15.4')
       _(platform3[:arch]).must_equal('x86_64')
-      _(call_count).must_equal(1) # Still should not increase
+      _(call_count).must_equal(2) # Still should not increase
+    end
+  end
+
+  describe 'serial number detection' do
+    it 'should detect serial number from chassis hardware XML output' do
+      hardware_output = <<~OUTPUT
+        <rpc-reply>
+          <chassis-inventory>
+            <chassis>
+              <name>Chassis</name>
+              <serial-number>JN123456</serial-number>
+              <description>SRX240H2</description>
+            </chassis>
+          </chassis-inventory>
+        </rpc-reply>
+      OUTPUT
+
+      test_connection = connection.new(hardware_output)
+      serial = test_connection.send(:detect_junos_serial)
+      _(serial).must_equal('JN123456')
+    end
+
+    it 'should return nil when receiving non-XML output' do
+      hardware_output = <<~OUTPUT
+        Serial number: SRX240-12345
+      OUTPUT
+
+      test_connection = connection.new(hardware_output)
+      serial = test_connection.send(:detect_junos_serial)
+      _(serial).must_be_nil  # No XML parsing means no serial
+    end
+
+    it 'should return nil with malformed XML' do
+      hardware_output = <<~OUTPUT
+        <rpc-reply>
+        <chassis-inventory>
+        <chassis>
+        <serial-number>ABC123DEF</serial-number>
+        <!-- Missing closing tags to trigger XML error -->
+      OUTPUT
+
+      test_connection = connection.new(hardware_output)
+      serial = test_connection.send(:detect_junos_serial)
+      _(serial).must_be_nil  # Malformed XML returns nil
+    end
+
+    it 'should handle no serial number gracefully' do
+      hardware_output = <<~OUTPUT
+        No chassis information available
+      OUTPUT
+
+      test_connection = connection.new(hardware_output)
+      serial = test_connection.send(:detect_junos_serial)
+      _(serial).must_be_nil
+    end
+
+    it 'should handle command failure for serial detection' do
+      test_connection = connection.new(nil) # Will return failed command
+      serial = test_connection.send(:detect_junos_serial)
+      _(serial).must_be_nil
+    end
+
+    it 'should cache serial detection results' do
+      hardware_output = <<~OUTPUT
+        <rpc-reply>
+          <chassis-inventory>
+            <chassis>
+              <serial-number>JN123456</serial-number>
+            </chassis>
+          </chassis-inventory>
+        </rpc-reply>
+      OUTPUT
+
+      test_connection = connection.new(hardware_output)
+
+      # Mock run_command_via_connection to track call count
+      call_count = 0
+      test_connection.define_singleton_method(:run_command_via_connection) do |_cmd|
+        call_count += 1
+        MockResult.new(hardware_output, 0)
+      end
+
+      # First call should execute command
+      serial1 = test_connection.send(:detect_junos_serial)
+      _(serial1).must_equal('JN123456')
+      _(call_count).must_equal(1)
+
+      # Second call should use cached result
+      serial2 = test_connection.send(:detect_junos_serial)
+      _(serial2).must_equal('JN123456')
+      _(call_count).must_equal(1) # Should not increase
+    end
+  end
+
+  describe 'serial extraction patterns' do
+    let(:mock_connection) { connection.new('') }
+
+    it 'should extract serial from XML format' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <chassis-inventory xmlns="http://xml.juniper.net/junos/12.1X47/junos-chassis">
+            <chassis junos:style="inventory">
+              <name>Chassis</name>
+              <serial-number>JN123456</serial-number>
+              <description>SRX240H2</description>
+            </chassis>
+          </chassis-inventory>
+        </rpc-reply>
+      XML
+      serial = mock_connection.send(:extract_serial_from_xml, output)
+      _(serial).must_equal('JN123456')
+    end
+
+    it 'should handle empty output in XML' do
+      serial = mock_connection.send(:extract_serial_from_xml, '')
+      _(serial).must_be_nil
+    end
+
+    it 'should handle nil output in XML' do
+      serial = mock_connection.send(:extract_serial_from_xml, nil)
+      _(serial).must_be_nil
+    end
+
+    it 'should return nil if XML parsing fails' do
+      output = 'Invalid XML content'
+      serial = mock_connection.send(:extract_serial_from_xml, output)
+      _(serial).must_be_nil
     end
   end
 end

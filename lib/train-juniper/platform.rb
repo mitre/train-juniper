@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'rexml/document'
+
 # Platform definition file for Juniper network devices.
 # This defines the "juniper" platform within Train's platform detection system.
 
@@ -51,6 +53,33 @@ module TrainPlugins::Juniper
 
     private
 
+    # Generic XML extraction helper
+    # @param output [String] XML output from command
+    # @param xpath_patterns [Array<String>] XPath patterns to try in order
+    # @param command_desc [String] Description of command for error messages
+    # @yield [REXML::Element] Optional block to process the found element
+    # @return [String, nil] Extracted text or result of block processing
+    def extract_from_xml(output, xpath_patterns, command_desc)
+      return nil if output.nil? || output.empty?
+
+      doc = REXML::Document.new(output)
+
+      # Try each XPath pattern until we find an element
+      element = nil
+      xpath_patterns.each do |xpath|
+        element = doc.elements[xpath]
+        break if element
+      end
+
+      return nil unless element
+
+      # If block given, let it process the element, otherwise return text
+      block_given? ? yield(element) : element.text&.strip
+    rescue StandardError => e
+      logger&.warn("Failed to parse XML output from '#{command_desc}': #{e.message}")
+      nil
+    end
+
     # Generic detection helper for version and architecture
     # @param attribute_name [String] Name of the attribute to detect
     # @param command [String] Command to run (default: 'show version')
@@ -95,79 +124,77 @@ module TrainPlugins::Juniper
     # @return [String, nil] JunOS version string or nil if not detected
     # @note This runs safely after the connection is established
     def detect_junos_version
-      detect_attribute('junos_version') { |output| extract_version_from_output(output) }
+      detect_attribute('junos_version', 'show version | display xml') { |output| extract_version_from_xml(output) }
     end
 
-    # Extract version string from JunOS show version output
-    # @param output [String] Raw output from 'show version' command
+    # Extract version string from JunOS show version XML output
+    # @param output [String] XML output from 'show version | display xml' command
     # @return [String, nil] Extracted version string or nil
-    def extract_version_from_output(output)
-      return nil if output.nil? || output.empty?
-
-      # Try multiple JunOS version patterns
-      patterns = [
-        /Junos:\s+([\w\d.-]+)/,                           # "Junos: 12.1X47-D15.4"
-        /JUNOS Software Release \[([\w\d.-]+)\]/,         # "JUNOS Software Release [12.1X47-D15.4]"
-        /junos version ([\w\d.-]+)/i,                     # "junos version 21.4R3"
-        /Model: \S+, JUNOS Base OS boot \[([\w\d.-]+)\]/, # Some hardware variants
-        /([\d]+\.[\d]+[\w.-]*)/                           # Generic version pattern
+    def extract_version_from_xml(output)
+      xpath_patterns = [
+        '//junos-version',
+        '//package-information/name[text()="junos"]/following-sibling::comment',
+        '//software-information/version'
       ]
 
-      patterns.each do |pattern|
-        match = output.match(pattern)
-        return match[1] if match
-      end
-
-      nil
+      extract_from_xml(output, xpath_patterns, 'show version | display xml')
     end
 
     # Detect JunOS architecture from device output
     # @return [String, nil] Architecture string or nil if not detected
     # @note This runs safely after the connection is established
     def detect_junos_architecture
-      detect_attribute('junos_architecture') { |output| extract_architecture_from_output(output) }
+      detect_attribute('junos_architecture', 'show version | display xml') { |output| extract_architecture_from_xml(output) }
     end
 
-    # Extract architecture string from JunOS show version output
-    # @param output [String] Raw output from 'show version' command
+    # Extract architecture string from JunOS show version XML output
+    # @param output [String] XML output from 'show version | display xml' command
     # @return [String, nil] Architecture string (x86_64, arm64, etc.) or nil
-    def extract_architecture_from_output(output)
-      return nil if output.nil? || output.empty?
-
-      # Try multiple JunOS architecture patterns
-      patterns = [
-        /Model:\s+(\S+)/, # "Model: SRX240H2" -> extract model as arch indicator
-        /Junos:\s+[\w\d.-]+\s+built\s+[\d-]+\s+[\d:]+\s+by\s+builder\s+on\s+(\S+)/, # Build architecture
-        /JUNOS.*\[([\w-]+)\]/,                                 # JUNOS package architecture
-        /Architecture:\s+(\S+)/i,                              # Direct architecture line
-        /Platform:\s+(\S+)/i,                                  # Platform designation
-        /Processor.*:\s*(\S+)/i # Processor type
+    def extract_architecture_from_xml(output)
+      xpath_patterns = [
+        '//product-model',
+        '//software-information/product-model',
+        '//chassis-inventory/chassis/description'
       ]
 
-      patterns.each do |pattern|
-        match = output.match(pattern)
-        next unless match
+      extract_from_xml(output, xpath_patterns, 'show version | display xml') do |element|
+        model = element.text.strip
 
-        arch_value = match[1]
-        # Convert model names to architecture indicators
-        case arch_value
+        # Map model names to architecture
+        case model
         when /SRX\d+/i
-          return 'x86_64'  # Most SRX models are x86_64
+          'x86_64'  # Most SRX models are x86_64
         when /MX\d+/i
-          return 'x86_64'  # MX routers are typically x86_64
+          'x86_64'  # MX routers are typically x86_64
         when /EX\d+/i
-          return 'arm64'   # Many EX switches use ARM
+          'arm64'   # Many EX switches use ARM
         when /QFX\d+/i
-          return 'x86_64'  # QFX switches typically x86_64
-        when /^(x86_64|amd64|i386|arm64|aarch64|sparc|mips)$/i
-          return arch_value.downcase
+          'x86_64'  # QFX switches typically x86_64
         else
-          # Return the model as-is if we can't map it
-          return arch_value
+          # Default to x86_64 for unknown models
+          'x86_64'
         end
       end
+    end
 
-      nil
+    # Detect JunOS serial number from device output
+    # @return [String, nil] Serial number string or nil if not detected
+    # @note This runs safely after the connection is established
+    def detect_junos_serial
+      detect_attribute('junos_serial', 'show chassis hardware | display xml') { |output| extract_serial_from_xml(output) }
+    end
+
+    # Extract serial number from JunOS chassis hardware XML output
+    # @param output [String] XML output from 'show chassis hardware | display xml' command
+    # @return [String, nil] Serial number string or nil
+    def extract_serial_from_xml(output)
+      xpath_patterns = [
+        '//chassis/serial-number',
+        '//chassis-sub-module/serial-number',
+        '//module/serial-number[1]'
+      ]
+
+      extract_from_xml(output, xpath_patterns, 'show chassis hardware | display xml')
     end
   end
 end

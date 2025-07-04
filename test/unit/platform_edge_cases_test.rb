@@ -37,28 +37,44 @@ describe 'Platform edge cases' do
     let(:connection) { connection_class.new(default_mock_options) }
 
     it 'should handle direct architecture values' do
-      # Test the direct architecture match path
+      # Test model to architecture mapping
       test_cases = {
-        'x86_64' => 'x86_64',
-        'AMD64' => 'amd64',
-        'i386' => 'i386',
-        'ARM64' => 'arm64',
-        'aarch64' => 'aarch64',
-        'SPARC' => 'sparc',
-        'mips' => 'mips'
+        'SRX240' => 'x86_64',
+        'MX960' => 'x86_64',
+        'EX4300' => 'arm64',
+        'QFX5100' => 'x86_64',
+        'Unknown' => 'x86_64' # Default
       }
 
       test_cases.each do |input, expected|
-        output = "Architecture: #{input}"
-        result = connection.send(:extract_architecture_from_output, output)
+        output = <<~XML
+          <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+            <software-information>
+              <host-name>test-device</host-name>
+              <product-model>#{input}</product-model>
+              <product-name>test</product-name>
+              <junos-version>12.1X47-D15.4</junos-version>
+            </software-information>
+          </rpc-reply>
+        XML
+        result = connection.send(:extract_architecture_from_xml, output)
         _(result).must_equal(expected)
       end
     end
 
-    it 'should return unknown architecture as-is' do
-      output = 'Model: CUSTOM-DEVICE-9000'
-      result = connection.send(:extract_architecture_from_output, output)
-      _(result).must_equal('CUSTOM-DEVICE-9000')
+    it 'should return x86_64 for unknown architecture' do
+      output = <<~XML
+        <rpc-reply xmlns:junos="http://xml.juniper.net/junos/12.1X47/junos">
+          <software-information>
+            <host-name>test-device</host-name>
+            <product-model>CUSTOM-DEVICE-9000</product-model>
+            <product-name>custom</product-name>
+            <junos-version>12.1X47-D15.4</junos-version>
+          </software-information>
+        </rpc-reply>
+      XML
+      result = connection.send(:extract_architecture_from_xml, output)
+      _(result).must_equal('x86_64') # Default for unknown
     end
   end
 
