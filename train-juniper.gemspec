@@ -62,7 +62,7 @@ Gem::Specification.new do |spec|
 
   # Community plugins typically use train-core for smaller footprint
   # train-core provides core functionality without cloud dependencies
-  spec.add_dependency 'train-core', '~> 3.12.13'
+  spec.add_dependency 'train-core', '~> 3.12', '>= 3.12.13'
 
   # SSH connectivity dependencies - match train-core's exact version range
   spec.add_dependency 'net-ssh', '>= 2.9', '< 8.0'
