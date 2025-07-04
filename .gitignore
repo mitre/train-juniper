@@ -106,3 +106,16 @@ session.md
 WINDOWS_*.md
 check_*.rb
 debug_*.md
+
+# AI Assistant Research (proprietary)
+docs/ai-assistant-research/
+
+# Archive and session history (old development files)
+docs/archive/
+docs/session-history/
+
+# Build artifacts
+pkg/
+site/
+coverage/
+*.gem
